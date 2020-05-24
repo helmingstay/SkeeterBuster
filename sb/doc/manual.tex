@@ -1,0 +1,1004 @@
+\documentclass[11pt]{article}
+\usepackage{geometry}
+\geometry{letterpaper}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{color}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2mm plus3mm minus3mm}
+\setcounter{tocdepth}{1}
+
+\usepackage{enumitem}
+\setlist[1]{itemsep=-3pt}
+
+%To highlight shell commands with typewriter text
+\newcommand{\shellcmd}[1]{\newline\hspace{15pt}\texttt{#1\newline{}}}
+\newcommand{\linecmd}[1]{\texttt{#1}}
+
+\title{NCSU models of mosquitoes and dengue - a user manual}
+\author{Emily C. Griffiths}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+%Speak to Fred about genetic controls
+
+\section{Introduction}
+This manual introduces two agent-based simulation models of mosquito dynamics and dengue fever epidemiology, which were developed at North Carolina State University in Fred Gould and Alun Lloyd's modeling group. The GUI discussed in a previous manual is no longer maintained, so here we update the manual and give instructions for running the models using the command line interface. Aspects of Skeeter Buster and SBEED are in development. Some of the features described in the manual are planned to be deprecated. Future versions of this manual will reflect this.
+
+Skeeter Buster is a biologically realistic model of \emph{Aedes aegypti} dynamics first published in $2009$ \cite{magori2009skeeter}. Skeeter Buster's many parameters can be set to match specific mosquito habitats. It feeds into the second model, Skeeter Buster's Epidemiological Extension for Dengue (SBEED). 
+
+\section{System Requirements}
+
+SBEED was developed on a Mac (specification below). Your system may require some modification to run the models.
+
+\begin{center}
+	\begin{itemize}
+		\item Mac OS X 10.9.3
+		\item libconfig library (freely available via \url{http://www.hyperrealm.com/libconfig/}) - to compile Skeeter Buster 
+		\item gcc 4.7.3 - to compile Skeeter Buster and SBEED C++ code
+		\item git 1.8.3.4 - for local version control
+		\item R 3.1.0 - to produce setup and configuration files for Skeeter Buster, and activity space files for SBEED (see pages \pageref{Rsetup} and \pageref{ActivitySpace})
+	\end{itemize}
+\end{center}
+
+\newpage{}\section{Compiling Skeeter Buster}
+
+Skeeter Buster is compiled from six header files and nineteen C++ files:
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{ll}
+
+\linecmd{Aedes\_class\_defs.h} & \linecmd{Aedes.cpp}\\
+\linecmd{Aedes.h} & 	\linecmd{Binomial.cpp}\\
+\linecmd{ConfigFile.h} & \linecmd{Building.cpp}\\
+\linecmd{Globals.h} & \linecmd{ConfigFile.cpp}\\
+\linecmd{resource.h} & \linecmd{Destructive\_Sampling.cpp}\\
+\linecmd{stdafx.h} & \linecmd{DispersalNetwork.cpp}\\
+ & \linecmd{EggsCohort.cpp}\\
+ & \linecmd{Female\_Adult\_Cohort.cpp}\\
+ & \linecmd{Fitness.cpp}\\
+ & \linecmd{Globals.cpp}\\
+ & \linecmd{Input.cpp}\\
+ & \linecmd{Larvae\_Cohort.cpp}\\
+  & \linecmd{Larvae\_Regime.cpp}\\
+  & \linecmd{LarvicideSpecifier.cpp}\\
+ & \linecmd{Male\_Adult\_Cohort.cpp}\\
+ & \linecmd{Output.cpp}\\
+  & \linecmd{Prespecified\_Traditional.cpp}\\
+ & \linecmd{Pupae\_Cohort.cpp}\\
+ & \linecmd{Receptacle.cpp}\\
+ & \linecmd{SampledHouses.cpp}\\
+ & \linecmd{stats.cpp}\\
+  & \linecmd{stdafx.cpp}\\
+ & \linecmd{Traditional.cpp}\\
+	 
+\end{tabular}
+\end{center}
+\label{default}
+\end{table}
+
+\begin{itemize}
+\item The if statements in the CreateDirectories function within Output.cpp have been commented out. 
+\item Skeeter Buster now has the option to treat individually specified homes with insecticide and to simulate locations that are no on a rectangular grid.
+\end{itemize}
+
+To compile these source files into an executable file called SB use the the command \linecmd{make} to call the Makefile. You may have to edit the paths within this file so the compiler can find all the header file dependencies.
+
+\newpage{}\section{Running Skeeter Buster}
+
+To run Skeeter Buster, you need:
+\begin{itemize}
+	\item An executable file (produced by the compilation code above).
+	\item A setup file called \linecmd{*.setup}  specifying the containers in each house and released mosquitoes. Kenichi produced some R scripts to generate these based on the patterns observed in Iquitos.
+	\item A configuration file called \linecmd{*.conf} specifying parameter values
+	\item Another configuration file called \linecmd{Dispersal\_Network.conf} that contains a neighbor list of which house is connected to which and the probability of a mosquito dispersing to each. Contains House ID, total number of neighbors, list of neighbors and probabilities. The order of houses does not matter. Kenichi is working on an R script to generate \linecmd{Dispersal\_Network.conf} from a GIS text file.
+	\item Annual weather file(s), e.g. \linecmd{iquitos00.dly} with columns: row number, maximum temperature ($\,^{\circ}\mathrm{C}$), minimum temperature, mean temperature, saturation deficit (mb), precipitation (mm), relative humidity (\%), and label. The top rows of the file may give the year, city, and country (first line), latitude, longitude, and elevation (second line), and source of the data (third line).
+	\item A scenario file called \linecmd{scenarios.csv}. Not required but helps keep track of different release strategies.
+	\end{itemize}
+
+You can produce custom setup or configuration files using the fifteen R scripts in the folder \linecmd{SkeeterBusterSetupScript}. The following sections describe the functionality and values of parameters in these files. Once you have the desired values in your scripts you can create setup or configuration files by running the R script called \linecmd{run\_this\_for\_setup\_conf\_files.R}, which calls the following 13 scripts: \label{Rsetup}
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{l}
+
+\linecmd{adult\_female\_release\_matrix.R} \\
+\linecmd{adult\_male\_release\_matrix.R} \\
+\linecmd{Calculate\_Physiological\_Development.R} \\
+\linecmd{GenerateConfFile.R} \\
+\linecmd{house\_write\_adult\_info.R} \\
+\linecmd{JustDataSelected.R} \\
+\linecmd{prescript.R} \\
+\linecmd{release\_eggs\_info.R} \\
+\linecmd{SetupFile.R} \\
+\linecmd{write\_added\_container.R} \\
+\linecmd{write\_container\_info\_releases\_into\_preexisting\_containers.R} \\
+\linecmd{write\_container\_info.R} \\
+\linecmd{write\_special\_containers.R} \\
+	 
+\end{tabular}
+\end{center}
+\label{default}
+\end{table}
+
+Ensure that your weather files include observations for at least as many days as you specify in the \linecmd{*.conf} file. While any number of days can be specified for simulation, Skeeter Buster will only read the weather files until the last specified day.
+
+\section{Configuration File Settings}
+
+The order in which parameters are specified within the \linecmd{SkeeterBuster.conf} file is arbitrary and does not affect the model.
+
+Skeeter Buster is based on CIMSiM \cite{focks1993dynamic} but includes stochasticity, spatial heterogeneity, and genetic control. Skeeter Buster includes individual genotypes (males/females, etc.), dispersal and population genetics. Below we discuss the meaning and value of each parameter specified in the \linecmd{.conf} file for SkeeterBuster.
+
+\linecmd{SIMULATION\_MODE1} indicates whether you want to run a recoded version of CIMSiM (\linecmd{0}) or full Skeeter Buster (\linecmd{1}). \emph{Aedes aegypti} mosquitoes breed in containers of water. In CIMSiM there is one shared container population of mosquitoes. In Skeeter Buster these can be individually set in each house using the \linecmd{.setup} file. 
+
+Model processes can be stochastic or deterministic by setting the \linecmd{SIMULATION\_MODE2} parameter to either \linecmd{1} or \linecmd{0} respectively. A deterministic simulation calculates the frequencies of insects growing, mating, moving, and dying as fixed proportions of cohorts. A stochastic simulation calculates the frequencies of individuals growing, mating, moving, and dying by selecting random numbers for each cohort.
+
+\linecmd{REPRODUCTION\_MODE} - how genotypes are assigned to new egg cohorts:
+\begin{itemize}
+	\item Calculation (\linecmd{0}) calculates ratios (like from punnet squares) to assign a fixed proportion of individuals to each potential genotype resulting from possible matings. This mode is slow to run with multiple genes.
+	\item Sampling (\linecmd{1}) randomly selects gamete types from an adult male and adult female in the available population, and combines them to create each egg's genotype.
+\end{itemize}
+
+\linecmd{DEVELOPMENT\_MODE} - whether mosquitoes develop using Fock's method in CiMSiM (0), or by degree days (1).
+
+\linecmd{DISPERSAL\_MODE} - the boundary conditions controlling what dispersing mosquitoes do when they reach the edge of the simulated area:
+\begin{itemize}
+	\item Sticky (\linecmd{0}) - If a mosquito tries to disperse beyond the edge, it remains in that house.
+	\item Bouncing (\linecmd{1}) - If a mosquito tries to disperse beyond the edge, it travels the same distance in the opposite direction.
+	\item Tore (\linecmd{2}) - The opposite edges are connected, meaning that houses on the top and bottom and on the left and right are neighbors. The city is shaped like a doughnut.
+	\item Random (\linecmd{3}) - If a mosquito tries to disperse beyond the edge, it disperses to another site at random along the edge. (This feature might never have been used and is considered for deprecation.)
+\end{itemize}
+
+%Need to elaborate on the following parameters
+
+\linecmd{FOOD\_INPUT\_METHOD} = 0
+
+\linecmd{NUMBER\_OF\_DAYS} is the length of the simulation. Each day every adult female that emerged at least one day ago completes a gonotrophic cycle. This value cannot exceed the number of days in the weather files.
+
+\linecmd{CHROM\_NUMBER} = 3 Number of chromosomes used
+
+\linecmd{IS\_IQUITOS} - See page \pageref{IsIquitos} 
+
+\bigskip{}
+
+These two parameters will be deprecated:
+\begin{enumerate}
+	\item \linecmd{INCREASED\_CONTAINER\_VARIANCE} = 0
+	\item \linecmd{INCREASED\_VARIANCE\_EVERY\_N\_HOUSES} = 1
+\end{enumerate}
+
+These nine parameters are ad hoc and got added opportunistically over the years
+\begin{enumerate}
+	\item \linecmd{OVIPOSIT\_EGGS\_INDEPENDENTLY} = 1
+	\item \linecmd{PROBABILITY\_CLUTCH\_PARTITIONED} = 0.85
+	\item \linecmd{MAXIMUM\_NUMBER\_OF\_EGG\_PARTITIONS} = 4
+	\item \linecmd{PROPORTION\_IN\_PARTITION\_0} = 0.45
+	\item \linecmd{PROPORTION\_IN\_PARTITION\_1}  = 0.2
+	\item \linecmd{PROPORTION\_IN\_PARTITION\_2}  = 0.2
+	\item \linecmd{PROPORTION\_IN\_PARTITION\_3}  = 0.15
+	\item \linecmd{LARVAL\_EFFECT\_ON\_OVIPOSITION\_PROBABILITY} = 1
+\end{enumerate}
+
+\subsection{Traditional control}\label{Traditionalcontrol}
+
+Traditional control methods are set using the following parameters:
+
+The type of control is set by \linecmd{TRADITIONAL\_CONTROL\_METHOD} using integers that in binary form correspond to a boolean for three methods, i.e. \linecmd{0} is read in as $000$ for no control methods, \linecmd{7} is read in as $111$ for all three control methods (adulticide, larvicide, and source removal), \linecmd{5} for $101$ for first and third control method, i.e. adulticide and source removal.
+
+The control is applied between the days specified by \linecmd{ADULTICIDE\_BEGIN\_DATE} and \linecmd{ADULTICIDE\_END\_DATE} every so many days as specified by \linecmd{ADULTICIDE\_FREQUENCY}.
+
+To specify the area to be sprayed, \linecmd{ADULTICIDE\_REGION} = $0$ denotes no spraying, $1$ is for a central rectangle, and $2$ is for a specified rectangle. \linecmd{ADULTICIDE\_COMPLIANCE} is the probability of being able to access a location for spraying to occur. Four parameters describe the coordinates of the vertices of the rectangle to be sprayed:
+\begin{itemize}
+	\item \linecmd{ADULTICIDE\_REGION\_2\_YMIN} = 15
+	\item \linecmd{ADULTICIDE\_REGION\_2\_YMAX} = 25
+	\item \linecmd{ADULTICIDE\_REGION\_2\_XMIN} = 20
+	\item \linecmd{ADULTICIDE\_REGION\_2\_XMAX} = 30
+\end{itemize}
+
+You can also specify particular houses for spraying or larvicide, and for sampling using \linecmd{Larvicide\_Specification.txt} and \linecmd{SamplingRoutine.txt}. These files specify the dates and number of houses to be covered, the IDs of each house to be covered sorted by day. For larvicide you must also specify which container in the house gets the larvicide of which efficacy on which days.
+
+% Source removal still just within a specified rectangle. LARVICIDE or SOURCE.
+
+Three parameters describe the effect of spray on mosquito mortality over time:
+\begin{itemize}
+	\item \linecmd{ADULTICIDE\_RESIDUAL\_LENGTH} = 0 The half-life of the insecticide
+	\item \linecmd{ADULTICIDE\_EFFICACY} = 0.75 The chance of an adult mosquito in that house being killed by the spray
+	\item \linecmd{ADULTICIDE\_EFFICACY\_DECREASE} = 0.5 The rate at which the efficacy of the spray subsides
+\end{itemize}
+
+\linecmd{ADULTICIDE\_TYPE} = $0$. This parameter serves no function in the code and will be deprecated.
+
+\linecmd{ADULTICIDE\_SIZE} = $10$. Spraying happens for values $>1$.
+
+\subsection{Genetic control}
+
+Skeeter Buster can only run one genetic control method at a time. This can be specified using \linecmd{GENETIC\_CONTROL\_METHOD}:
+\begin{itemize}
+	\item Neutral (\linecmd{0}) - all 
+	 have the same fitness.
+	\item Engineered Underdominance (\linecmd{1}) - introduces two anti-pathogen gene constructs. When only a single construct type is found in an individual, the individual dies.%Messy code
+	\item Wolbachia (\linecmd{2}) - commensal gut bacteria were once considered as a gene drive mechanism. This feature of Skeeter Buster has not been used for a number of years.
+	\item Meiotic Drive (\linecmd{3}) - introduces a drive allele on the male chromosome and an insensitive and anti-pathogen allele construct on the female chromosome. When a drive male mates with a female lacking the insensitive allele, the offspring have a male-biased sex ratio.
+	\item Medea (\linecmd{4}) - follows the theoretical use of Medea for gene drive in \emph{Aedes} \cite{ward2011medea}.
+	\item Female Killing (\linecmd{5}) - 
+	\item Lethal Genes (\linecmd{6}) - follows the theoretical use of a Female Killer Rescue strategy intended to reduce population density (or cause local extinction) by introducing mosquitoes that have one or multiple insertions of a gene \cite{gould2008killer}. We often refer to this as \emph{Female Killing} because females carrying this gene die while the males carry the gene to the next generation where daughters also die, etc. %Check this, esp. in relation to 5.
+	\item Selection (\linecmd{7}) - increase in genetic load. This is a possibility for Skeeter Buster unconnected with any known publication.
+	\item Reduce and Replace (\linecmd{8}) - release a lethal gene then release mosquitoes with an anti-pathogen gene. %Specify how to run AntiPathogen simulations.
+	\item Male killing (\linecmd{9}) - this is a possibility for Skeeter Buster unconnected with any known publication.
+\end{itemize}
+
+These parameters affect the method specified above:
+\begin{itemize}
+	\item \linecmd{FITNESS\_COST\_STAGE} - The life stage where fitness is affected. Eggs (\linecmd{0}), Larvae (\linecmd{1}), Pupae (\linecmd{2}), or Adults (\linecmd{3}).
+	\item \linecmd{FITNESS\_COST\_STAGE\_RR} - The extra life stage where fitness is affected in Reduce and Replace simulations. Eggs (\linecmd{0}), Larvae (\linecmd{1}), Pupae (\linecmd{2}), or Adults (\linecmd{3}).
+	\item \linecmd{TETRACYCLINE} - Is tetracycline used in the released containers  (\linecmd{1}), or not (\linecmd{0}).
+	\item \linecmd{FITNESS\_COST\_STAGE\_SPECIFIC\_AGE} - The age of mosquitoes experiencing the lethal effects (usually \linecmd{1}).
+	\item \linecmd{EMBRYONIC\_COST\_SELECTION\_TYPE} - soft or hard selection costs at immature life stages (\linecmd{0} or \linecmd{1} respectively).
+\end{itemize}
+
+The following parameters are the defaults for the respective genetic control methods. There are also parameters that govern the life stage at which fitness costs operate. %What are these parameters? Do they come later in the manual? If so, refer to them here.
+
+Settings for Engineered Underdominance:
+%What are these?
+\begin{itemize}
+	\item \linecmd{EU\_TYPE} = 1
+	\item \linecmd{FITNESS\_COST\_CONSTRUCT\_ALPHA} = 0
+	\item \linecmd{FITNESS\_COST\_CONSTRUCT\_BETA} = 0
+	\item \linecmd{FITNESS\_COST\_CONSTRUCT\_GAMMA} = 0
+	\item \linecmd{FITNESS\_COST\_CONSTRUCT\_DELTA} = 0
+	\item \linecmd{FITNESS\_COST\_DOMINANCE} = 0.5
+\end{itemize}
+
+Settings for \emph{Wolbachia}:
+\begin{itemize}
+	\item \linecmd{NUMBER\_OF\_INCOMPATIBLE\_WOLBACHIA} = 0
+	\item \linecmd{WOLBACHIA\_INFECTED\_FEMALE\_FECUNDITY\_LOSS} = 0
+	\item \linecmd{WOLBACHIA\_LEVEL\_OF\_INCOMPATIBILITY} = 1
+	\item \linecmd{WOLBACHIA\_MATERNAL\_TRANSMISSION} = 1
+	%WOLBACHIA_SURVIVAL_REDUCTION_MALE_ONSET_AGE
+	%WOLBACHIA_SURVIVAL_REDUCTION_MALE_FACTOR
+	%WOLBACHIA_SURVIVAL_REDUCTION_FEMALE_ONSET_AGE
+	%WOLBACHIA_SURVIVAL_REDUCTION_FEMALE_FACTOR
+\end{itemize}
+
+Settings for Meiotic Drive:
+\begin{itemize}
+	\item \linecmd{MD\_TYPE} = 1
+	\item \linecmd{FITNESS\_COST\_INSENSITIVE\_TRANSGENE} = 0
+	\item \linecmd{FITNESS\_COST\_INSENSITIVE\_NATURAL} = 0
+	\item \linecmd{FITNESS\_COST\_DRIVE\_GENE} = 0
+	\item \linecmd{DRIVE\_STRENGTH\_SN} = 0.4
+	\item \linecmd{DRIVE\_STRENGTH\_IT} = 0
+	\item \linecmd{DRIVE\_STRENGTH\_IN} = 0
+	\item \linecmd{DRIVE\_STRENGTH\_MN} = 0
+	\item \linecmd{MD\_FITNESS\_COST\_DOMINANCE} = 0.5
+\end{itemize}
+
+Settings for Medea:
+\begin{itemize}
+	\item \linecmd{Medea\_UNITS} = 0
+	\item \linecmd{Medea\_CROSS\_RESCUE} = 0
+	\item \linecmd{Medea\_MATERNAL\_LETHALITY} = 1
+	\item \linecmd{Medea\_MATERNAL\_FECUNDITY\_LOSS} = 0.1
+	\item \linecmd{Medea\_MATERNAL\_FECUNDITY\_LOSS\_DOMINANCE} = 0.5
+	\item \linecmd{Medea\_FITNESS\_COST\_PER\_CONSTRUCT} = 0
+	\item \linecmd{Medea\_FITNESS\_COST\_DOMINANCE} = 0.5
+\end{itemize}
+
+Settings for Reduce and Replace (note that Anti-Pathogen, Female Killing, and FKR are special cases):%Specify how so
+\begin{itemize}
+	\item \linecmd{IS\_RESCUE} = 0
+	\item \linecmd{NUMBER\_OF\_FEMALE\_KILLING\_LOCI} = 1
+	\item \linecmd{FEMALE\_KILLING\_EFFICIENCY} = 1
+	\item \linecmd{FKR\_IS\_EMBRYO\_KILLING} = 0
+	\item \linecmd{KILLING\_ALLELE\_HOMOZYGOUS\_FITNESS\_COST} = 0
+	\item \linecmd{KILLING\_ALLELE\_FITNESS\_COST\_DOMINANCE} = 0.5
+	\item \linecmd{RESCUE\_ALLELE\_HOMOZYGOUS\_FITNESS\_COST} = 0
+	\item \linecmd{RESCUE\_ALLELE\_FITNESS\_COST\_DOMINANCE} = 0.5
+	\item \linecmd{TRANSGENE\_ALLELE\_HOMOZYGOUS\_FITNESS\_COST} = 0
+	\item \linecmd{TRANSGENE\_ALLELE\_FITNESS\_COST\_DOMINANCE} = 0.5
+	\item \linecmd{NUMBER\_OF\_ADDITIONAL\_LOCI} = 1
+\end{itemize}
+
+Settings for Ovitrap Control:
+\begin{itemize}
+	\item \linecmd{OVITRAP\_FEMALE\_KILLING\_EFFICIENCY}
+\end{itemize}
+
+\subsection{Physiological Development}
+These parameters are the most complicated inputs, often referring to different life stages. Use the default values unless you have better estimates. Refer to a previous uncertainty analysis to find parameter value ranges that were deemed suitable by subject experts \cite{xu2010understanding}.
+
+Physiological development is related to daily temperature. Each day the development accumulated is calculated using enzyme kinetics equations. Eggs need a certain level of development to hatch into larvae, and the maximum amount of development is $1.0$. The \linecmd{physiological development threshold} is how close to $1.0$ the development needs to be at the beginning of the day to ensure hatching by the end of that day. In the default case, eggs that are at $95\%$ of the maximal development threshold at the beginning of the day are permitted to hatch during that day time-step because they will be able to reach $100\%$ of the necessary development sometime during that day time-step.
+
+Enzyme kinetics parameters calculate the development rate of each mosquito at its particular life stage. In all these four life stages these are based on the idea that mosquito development depends on the activity of critical enzymes, which is temperature dependent.
+\begin{itemize}
+	\item \linecmd{R} = $1.987$
+	\item \linecmd{R025} is the development rate per hour at 25$^\circ$ C with no temperature inactivation of enzyme.
+	\item \linecmd{DHA} is activation of the reaction that is catalyzed by the enzyme (in calories per mole).
+	\item \linecmd{DHH} is the inactivation of the enzyme at higher temperatures (in calories per mole).
+	\item \linecmd{THALF} is the temperature (in Kelvin) where half the enzymes are denatured.
+\end{itemize}
+
+These five parameters are specified separately and superceded by \linecmd{\_EMBRYONATION}, \linecmd{\_LARVAL\_DEVELOPMENT}, \linecmd{\_PUPAL\_DEVELOPMENT}, and \linecmd{\_GONOTROPHIC\_CYCLE} for the relevant life stages.
+
+\begin{itemize}
+	\item \linecmd{PHYSIOLOGICAL\_DEVELOPMENT\_THRESHOLD\_EMBRYONATION} = 0.95
+	\item \linecmd{SKEETER\_BUSTER\_PHYSIOLOGICAL\_DEVELOPMENT\_THRESHOLD\_PUPATION} = 0.95
+	\item \linecmd{CIMSiM\_PHYSIOLOGICAL\_DEVELOPMENT\_THRESHOLD\_PUPATION} = 0.95
+	\item \linecmd{PHYSIOLOGICAL\_DEVELOPMENT\_THRESHOLD\_EMERGENCE} = 0.95
+	\item \linecmd{PHYSIOLOGICAL\_DEVELOPMENT\_THRESHOLD\_FIRST\_GONOTROPHIC\_CYCLE} = 1
+	\item \linecmd{PHYSIOLOGICAL\_DEVELOPMENT\_THRESHOLD\_LATER\_GONOTROPHIC\_CYCLES} = 0.58
+	\item \linecmd{SKEETER\_BUSTER\_PHYSIOLOGICAL\_DEVELOPMENT\_THRESHOLD\_FIRST} = 0.89
+	\item \linecmd{SKEETER\_BUSTER\_PHYSIOLOGICAL\_DEVELOPMENT\_THRESHOLD\_LAST} = 1.17
+	\item \linecmd{SKEETER\_BUSTER\_PHYSIOLOGICAL\_DEVELOPMENT\_THRESHOLD\_SHAPE} = 2.0126
+\end{itemize}
+
+\subsubsection{Survival}
+
+Mosquito physiology cannot tolerate extremes of temperature. Arthropods like ants, spiders, and isopods are predators of \emph{A. aegypti} whose foraging is directly related to temperature. The temperature range of this activity is described by the proportion of surviving mosquitoes at certain $\,^{\circ}\mathrm{C}$. Between high and low temperature limits and normal temperature, temperature and survival are linearly related.
+
+%Need to insert values and capitals below.
+
+The following parameters define the temperature-survival curve:\label{tempsurv}
+
+\begin{itemize}
+	\item \linecmd{DAILY\_SURVIVAL\_LOW\_TEMPERATURE} is the proportion of eggs surviving at or below the low temperature limit. If the low temperature limit is absolute, so that the predators are unable to function at all, set this at $1.0$.
+	\item \linecmd{DAILY\_SURVIVAL\_LOW\_TEMPERATURE\_LIMIT} is the highest temperature where the maximum amount of mortality due to cold temperature occurs.
+	\item \linecmd{DAILY\_SURVIVAL\_NORMAL\_TEMPERATURE\_LOWER\_LIMIT} is the lowest possible temperature that has no effect on survival.
+	\item \linecmd{DAILY\_SURVIVAL\_NORMAL\_TEMPERATURE\_UPPER\_LIMIT} is the highest possible temperature that has no effect on survival.
+	\item \linecmd{DAILY\_SURVIVAL\_HIGH\_TEMPERATURE} is the proportion of eggs surviving at or below the high temperature limit. The default setting is $0.7$, which would mean at the high temperature limit $30\%$ of eggs are removed. 
+	\item \linecmd{DAILY\_SURVIVAL\_HIGH\_TEMPERATURE\_LIMIT} is the lowest temperature where the maximum amount of mortality due to high temperatures occurs.
+\end{itemize}
+
+These are specified separately and preceded by \linecmd{EGG\_}, \linecmd{FEMALE\_LARVAE\_}, \linecmd{MALE\_LARVAE\_}, \linecmd{FEMALE\_PUPAE\_}, \linecmd{MALE\_PUPAE\_}, \linecmd{FEMALE\_ADULT\_}, and \linecmd{MALE\_ADULT\_} for the relevant sexes and life stages.
+
+Parameters describing survival with desiccation at different life stages are:
+
+\begin{itemize}
+	\item \linecmd{EGG\_DAILY\_SURVIVAL\_WET\_CONTAINER} - the probability that an egg will not die of desiccation in a wet container. Set at 1.0 for most environments.
+	\item \linecmd{EGG\_DAILY\_SURVIVAL\_DRY\_CONTAINER\_SUNEXPOSURE\_LIMIT} - the limit of sun exposure above which the risk of desiccation and overheating is high.
+	\item \linecmd{EGG\_DAILY\_SURVIVAL\_DRY\_CONTAINER\_LOW\_SUNEXPOSURE\_LOW\_SATURATIONDEFICIT\_LIMIT} - the risk of desiccation if the air is dry, even with low sun exposure. The higher the saturation deficit, the drier the air is. This number is the limit of low saturation-deficit at low sun exposure.
+	\item \linecmd{EGG\_DAILY\_SURVIVAL\_DRY\_CONTAINER\_LOW\_SUNEXPOSURE\_HIGH\_SATURATIONDEFICIT\_LIMIT} - the limit of high saturation-deficit at low sun exposure. 
+	\item \linecmd{EGG\_DAILY\_SURVIVAL\_DRY\_CONTAINER\_LOW\_SUNEXPOSURE\_LOW\_SATURATIONDEFICIT} - the survival probability at low sun exposure when the saturation-deficit is below the low-saturation-deficit limit.
+	\item \linecmd{EGG\_DAILY\_SURVIVAL\_DRY\_CONTAINER\_LOW\_SUNEXPOSURE\_HIGH\_SATURATIONDEFICIT} - the probability of survival for eggs at low sun exposure when the saturation-deficit is above the high saturation-deficit limit.
+	\item \linecmd{EGG\_DAILY\_SURVIVAL\_DRY\_CONTAINER\_HIGH\_SUNEXPOSURE} - the probability of survival for eggs when the sun exposure of the container is higher than the high sun exposure limit.
+\end{itemize}
+
+The probability of survival for eggs at low sun exposure when the saturation-deficit is in between the low and the high limits is a linear between the two corresponding survival values.
+
+The following five are specified for each sex using \linecmd{FEMALE\_} and \linecmd{MALE\_} prefixes:
+\begin{itemize}
+	\item \linecmd{LARVAE\_DAILY\_SURVIVAL\_DRY\_CONTAINER}
+	\item \linecmd{ADULT\_DAILY\_SURVIVAL\_LOW\_SATURATIONDEFICIT\_LIMIT}
+	\item \linecmd{ADULT\_DAILY\_SURVIVAL\_HIGH\_SATURATIONDEFICIT\_LIMIT}
+	\item \linecmd{ADULT\_DAILY\_SURVIVAL\_LOW\_SATURATIONDEFICIT}
+	\item \linecmd{ADULT\_DAILY\_SURVIVAL\_HIGH\_SATURATIONDEFICIT}
+\end{itemize}
+
+\linecmd{Number of Linkage Groups} is how many distinct linkage groups to track in the mosquitoes. Linkage groups are essentially genes, as Skeeter Buster is only designed to handle free recombination. This will depend on the genetic control method. The default of one linkage group distinguishes females from males.
+
+\subsubsection{Egg hatching}\label{kinetics}
+Even when eggs have reached their development threshold for hatching (embryonation), environmental factors may delay hatching.
+
+\begin{itemize}
+	\item \linecmd{MINIMUM\_TEMPERATURE\_FOR\_EGGHATCH} is the lowest temperature ($\,^{\circ}\mathrm{C}$) at which eggs will hatch.
+	\item \linecmd{RATIO\_OF\_EGGS\_HATCHING\_WITHOUT\_FLOODING} is the proportion of eggs above the water line that hatch.
+	\item \linecmd{DAILY\_RATIO\_OF\_EMBRYONATED\_EGGS\_THAT\_HATCH\_IF\_SUBMERGED} is the proportion of eggs submerged in water that hatch.
+\end{itemize}
+
+\subsubsection{Larvae}
+
+\linecmd{Conversion rate of cadavers to larval food} - sets the conversion rate between the weight of the dead larvae/pupae and the amount of larval food they contribute. When larvae and pupae die, they constitute a rich resource for bacterial development. In turn, other larvae consume the bacteria growing on the bodies of dead mosquitoes. There may also be cannibalism of one larva on another, though the prey of \emph{Aedes aegypti} larvae is debated.%Reference debate over larval food sources
+
+The level of food declines during the day as it is consumed. The \linecmd{Number of Euler steps} is the number of times in a day the program stops to recalibrate the level of food given the larval consumption up to that point. While increasing this number increases the precision of the estimates, it also greatly slows down the program. A value of $8$ is a good compromise between precision and computational speed.
+
+Pupation values dictate when larvae pupate based on the level of development. Development is calculated from the enzyme kinetics equations (page \pageref{kinetics}), with a development value of $1.0$ equaling the amount of development necessary to switch from larva to pupa. It is possible for larvae to reach a development level above the pupation threshold and remain as larvae if they lack the necessary weight (and lipid reserves) to make the conversion).
+\begin{itemize}
+	\item \linecmd{CIMSiM PhysDev Threshold} - In CIMSiM, all larvae in a cohort pupate simultaneously, so the Physiological Development Threshold determines when an entire cohort emerges. The threshold is set just below 1.0, because if the larva reaches the threshold at the beginning of the day, sometime during the day it will reach 1.0. 
+	\item \linecmd{Skeeter Buster PhysDev Threshold} - Skeeter Buster allows a variation in the time of pupation for members of the same larval cohort. This number is the median of the physiological developmental threshold of female larvae. 
+	\item \linecmd{Skeeter Buster PhysDev Threshold First} - The variation in pupation is described by a sigmoid curve. This value is the smallest physiological developmental percentage that provides a non-zero probability of pupation.
+	\item \linecmd{Skeeter Buster PhysDev Threshold Last} - the largest physiological developmental percentage that provides a probability of pupation less than one.
+	\item \linecmd{Skeeter Buster PhysDev Threshold Shape} determines the shape of the sigmoid function.
+\end{itemize}
+
+Female Larval parameters are divided into Survival, Gilpin-McClelland, and Pupation. Male Larval parameters have the same meaning as females but can have different values.
+ 
+\begin{itemize}
+	\item \linecmd{Female larvae nominal daily survival} is the probability that a larva will survive through a day given optimal conditions. 
+	\item \linecmd{Dry container survival} is the probability that a larva will survive through a day if the container dries out.
+	\item \linecmd{CIMSiM weight at hatch} is the weight of neonate female larvae (in mg) when running the CIMSiM version.
+	\item \linecmd{Skeeter Buster weight at hatch} is the weight of neonate female larvae 
+	\item \linecmd{Fasting survival with lipid reserve} is the probability of surviving a day by utilizing lipid reserves when the food in a container has run out.
+	\item \linecmd{Fasting survival without lipid reserve} is the probability of surviving a day when the food in a container has run out for larvae that lack lipid reserves.
+	\item \linecmd{Minimum weight for survival} is the number of calories a larva needs to survive. Larvae below this level die.
+	\item \linecmd{CIMSiM maximum physdev for survival} is the maximum level of physiological development attainable. If the larva still has not pupated it dies from long term starvation when running the CIMSiM version.
+	\item \linecmd{Skeeter Buster maximum physdev for survival} is the maximum level of physiological development attainable. If the larva still has not pupated it dies from long term starvation when running the Skeeter Buster version.
+	\item \linecmd{Survival at pupation due to birth defects} is the probability that a larva will correctly molt into a pupa when it is the right time. All other larvae die due to deformation.
+\end{itemize}
+
+Gilpin-McClelland parameters determine larval metabolism and development rates. See\cite{Gilpin79} for exact equations.
+
+\begin{itemize}
+	\item \linecmd{Conversion rate of food to biomass} (a) is the proportion of calories consumed that actually result in an increase of biomass, rather than being utilized in metabolism or excreted. The default value of $0.3$ indicates that $30\%$ of consumed calories contribute to biomass.
+	\item \linecmd{Increment of increase of rate of food exploitation by body weight} (b): As larvae become larger, they are able to find and process food faster. This parameter describes the relationship between weight gain and increased ability to exploit the food resources.
+	\item \linecmd{Rate of approach to the asymptote of saturation} (c): Larvae have a Type II functional response, which means that at increasingly high density of food, the time to process food and not the availability of food, is the limiting factor. This value indicates how quickly the larvae reach saturation.
+	\item \linecmd{Rate of metabolic loss} (d1) is a constant that relates lack of food resources (starvation) with a loss of biomass as the biomass is converted into metabolic energy.
+	\item \linecmd{Exponent of metabolic loss} (d2) is a constant that relates lack of food resources (starvation) with a loss of biomass. Roughly, the metabolic requirements for a day are equal to d1 time the larva?s weight taken to the power of d2. 
+	\item \linecmd{Chronological basis at 26C} (fT): The original Gilpin-McClelland equation have been developed using controlled experiments at $26\,^{\circ}\mathrm{C}$. CIMSiM expanded on this method by including this chronological basis at different water temperatures.
+	\item \linecmd{Lipid ratio unavailable to fasting} (Lmin): A fraction of the biomass can not be converted into metabolism because it is used for structural necessities (like cell membranes). This value is the proportion of lipids tied up in necessary functions.
+	\item \linecmd{Parameter 1 for conversion of body weight to lipid amount}: CIMSiM uses a simple formula to derive the amount of lipids based on the weight of larvae. This value is parameter one of that formula.
+	\item \linecmd{Parameter 2 for conversion of body weight to lipid amount}: CIMSiM uses a simple formula to derive the amount of lipids based on the weight of larvae. This value is parameter second of that formula.
+\end{itemize}
+
+Pupation parameters determine the timing of pupation based on larval weight and development. Interpretation and estimation of these parameters can be found in \cite{focks1993dynamic}.
+
+The CIMSiM model assumes that male and female larvae are equal, so the values here will be the same as the male larvae pupation parameters.:
+
+\begin{itemize}
+	\item \linecmd{Absolute minimum larval weight for pupation}
+	\item \linecmd{Slope of earliest pupation weight with temperature}
+	\item \linecmd{Intercept of earliest pupation weight}
+	\item \linecmd{Physiological development at earliest pupation}
+\end{itemize}
+
+Skeeter Buster calculates the pupation threshold like CIMSiM, except it allows for natural variation in the population. The Intercept of earliest pupation weight of $50\%$ in Skeeter Buster is the same value as the Intercept of earliest pupation weight for CIMSiM. Additionally the slopes are adjusted to account for gender differences:
+
+\begin{itemize}
+	\item \linecmd{Absolute minimum larval weight for pupation}
+	\item \linecmd{Slope of earliest pupation weight with temperature}
+	\item \linecmd{Intercept of earliest pupation weight}
+	\item \linecmd{Intercept of earliest pupation weight for $25\%$}
+	\item \linecmd{Intercept of earliest pupation weight for $50\%$}
+	\item \linecmd{Intercept of earliest pupation weight for $75\%$}
+	\item \linecmd{Intercept of earliest pupation weight for $100\%$}
+	\item \linecmd{Physiological development at earliest pupation}
+\end{itemize}
+
+\subsubsection{Pupae}
+
+These parameters regulate how pupae emerge into adult insects:
+
+\begin{itemize}
+	\item \linecmd{PhysDev Threshold} - the threshold used in the CIMSiM model.
+	\item \linecmd{Skeeter Buster PhysDev Threshold First} - the minimum physiological development value needed for emergence.
+	\item \linecmd{Skeeter Buster PhysDev Threshold Last} - the maximum physiological development value needed for emergence (all pupae will have emerged by this development level.)
+	\item \linecmd{Skeeter Buster PhysDev Threshold Shape} - the relationship between physiological development and proportion of pupae emerged.
+\end{itemize}
+
+Enzyme kinetics parameters calculate the pupal development rate and have the same meaning as for eggs and larvae (page \pageref{kinetics}).
+
+Female and male pupae have the same parameters but can have different values:
+
+\linecmd{Female pupae nominal daily survival} is the proportion of pupae that survive each day with no external source of mortality.
+
+\linecmd{Female pupae survival at emergence} is the probability of eclipsing when physiologically ready to emerge as adults without fatal complications.
+
+The parameters for the temperature-survival curve for female pupae have the same meaning as those for eggs and larvae (page \pageref{tempsurv}).
+
+\subsubsection{Adult survival}
+
+Survival rates of adults can be nominal (regardless of environmental condition), or the default values can be modified by mosquito age. Males and females can have different values of survival parameters. Reproduction parameters only apply to females.
+
+\linecmd{CIMSiM female adult nominal daily survival} is the proportion of female adults surviving each day in CIMSiM mode.
+
+In Skeeter Buster, age-dependent adult survival ($F(a)$) can be of three different types:
+\begin{enumerate}
+	\item (none): there is no age-dependence, the survival rate is equal at all ages to the survival at age 0;
+	\item Linear decrease in survival from age 0 to a maximum age at which survival is 0. 
+	\item Linear from age: Survival is constant until and age, set by the user, where survival decreases linearly until the maximum age, set by user, and at which survival is 0. 
+\end{enumerate}
+
+$$ \mbox{daily\_survival}=f(a)\cdot \mbox{default\_survival} $$
+
+\[f(a)= \left\{
+	\begin{array}{lr}
+		1 \hfill \mbox{if \linecmd{AGE\_DEPENDENT\_SURVIVAL}}=0\\
+		\mbox{max}[0, 1-\frac{a}{a_{max}}] \hfill \mbox{if \linecmd{AGE\_DEPENDENT\_SURVIVAL}}=1\\
+		1 \hfill \mbox{if \linecmd{AGE\_DEPENDENT\_SURVIVAL}}=2 \mbox{ }\&\mbox{ } a<a_{sen}\\
+		\mbox{max}[0, 1-\frac{a-a_{sen}}{a_{max}-a_{sen}}] \hfill \mbox{if \linecmd{AGE\_DEPENDENT\_SURVIVAL}}=2 \mbox{ }\&\mbox{ } a>a_{sen}\end{array}
+\right.
+\]
+
+\begin{itemize}
+	\item \linecmd{MALE\_AGE\_DEPENDENT\_SURVIVAL} case for males
+	\item \linecmd{MALE\_START\_SENESCENCE\_2} $a_{sen}$ for males
+	\item \linecmd{MALE\_MAXIMUM\_AGE\_2} $a_{max}$ for males
+	\item \linecmd{FEMALE\_AGE\_DEPENDENT\_SURVIVAL} case for females
+	\item \linecmd{FEMALE\_START\_SENESCENCE\_2} $a_{sen}$ for females
+	\item \linecmd{FEMALE\_MAXIMUM\_AGE\_2} $a_{max}$ for females
+	\item \linecmd{Survival rate at age 0} - the basic age-independent survival rate.
+\end{itemize}
+
+The parameters for the temperature-survival curve for female pupae have the same meaning as those for eggs, larvae, and pupae (page \pageref{tempsurv}).
+
+Mortality due to desiccation is described by the following parameters:
+\begin{itemize}
+	\item \linecmd{Low saturation-deficit limit} is the lowest saturation deficit at which adults suffer a risk of desiccation. Below this limit there is no reduction in the risk of desiccation.
+	\item \linecmd{High saturation-deficit limit} is the highest saturation deficit at which adults suffer an increased risk of desiccation. Saturation deficits above this value do not have a higher risk of desiccation. 
+	\item \linecmd{Low saturation-deficit survival} is the proportion of individuals that survive at the low saturation-deficit limit. 
+	\item \linecmd{High saturation-deficit survival} is the proportion of individuals that survive at the low saturation-deficit limit.
+\end{itemize}
+
+\subsubsection{Female Adult Reproduction}
+
+Enzyme kinetics parameters control the time for nulliparous females to become parous, and have the same meaning as those for eggs, larvae, and pupae (page \pageref{kinetics}).
+
+\begin{itemize}
+	\item \linecmd{PhysDev threshold first gonotrophic cycle} is the minimum physiological development required for a female to reach her first gonotrophic cycle.
+	\item \linecmd{PhysDev threshold later gonotrophic cycles} is the minimum physiological development required for a female to reach successive gonotrophic cycle. 
+	\item \linecmd{Conversion rate of dry weight to wet weight}. Female adult weight is determined by the amount they have consumed (dry weight) and the amount of water lost or gained from the environment according to this conversion factor.
+	\item \linecmd{Daily fecundity by wet weight factor} is the amount of eggs that can be produced on a daily basis by wet weight (in mg).
+	\item \linecmd{Skeeter Buster fecundity drop by age after $25$ days} is the daily drop in fecundity for each day the mosquito survives past day $25$ of adulthood.
+	\item \linecmd{Skeeter Buster ratio of mean and standard deviation of fecundity} - the variation of fecundity assigned to individual mosquitoes.
+	\item \linecmd{Minimum temperature for oviposition} is the daily mean temperature below which females will not oviposit.
+	\item \linecmd{Oviposition reduction in covered containers} is the choice of oviposition is based on the size of each container (the larger the container the higher the probability of oviposition). This parameter reduces that probability for a given container if it happens to be covered. It is set as a multiplicative coefficient for that probability, so $0.1$ means it is $10$ times less likely that a female oviposits in a covered container, and $1$ means no such reduction. 
+\end{itemize}
+
+\subsection{Movement}
+
+Dispersal can happen in three ways: two types of adult dispersal, and plasticity in container distribution.
+
+\begin{itemize}
+	\item \linecmd{NULLIPAROUS\_FEMALE\_ADULT\_DISPERSAL $=0.3$}
+	\item \linecmd{PAROUS\_FEMALE\_ADULT\_DISPERSAL $=0.3$}
+	\item \linecmd{MALE\_ADULT\_DISPERSAL $=0.3$}
+	\item \linecmd{NULLIPAROUS\_FEMALE\_ADULT\_DISPERSAL\_FROM\_EMPTY\_HOUSE $=0.8$}
+	\item \linecmd{PAROUS\_FEMALE\_ADULT\_DISPERSAL\_FROM\_EMPTY\_HOUSE $=0.8$}
+	\item \linecmd{MALE\_ADULT\_DISPERSAL\_FROM\_EMPTY\_HOUSE $=0.8$}
+	\item \linecmd{MALE\_ADULT\_DISPERSAL\_WHEN\_NO\_FEMALE $=0.8$}
+\end{itemize}
+
+\begin{itemize}
+	\item \linecmd{NULLIPAROUS\_FEMALE\_ADULT\_LONG\_RANGE\_DISPERSAL} $=0.02$
+	\item \linecmd{PAROUS\_FEMALE\_ADULT\_LONG\_RANGE\_DISPERSAL} $=0$
+	\item \linecmd{MALE\_ADULT\_LONG\_RANGE\_DISPERSAL} $=0$
+\end{itemize}
+
+\begin{itemize}
+	\item \linecmd{LR\_DISPERSAL\_MAX\_DISTANCE} $=10$
+	\item \linecmd{CONTAINER\_MOVEMENT\_PROBABILITY} $=0$
+	\item \linecmd{PROBABILITY\_OF\_EMPTYING\_MANUALLY\_FILLED\_CONTAINERS} $=0.11$
+\end{itemize}
+
+The parameter \linecmd{DISPERSAL\_DIRECTION\_BIAS} would allow for a prevailing wind or orientation of buildings, but is not currently implemented.
+
+\bigskip{}
+
+\linecmd{Short range dispersal} is where any adult mosquito can move to neighboring houses (sharing an edge) each day. You can set different daily dispersal rates for nulliparous females, parous females, and males. The last parameter %which?
+is a direction bias: if you set it greater than $1$ then vertical dispersal will be favored, lower than $1$ then horizontal dispersal will be favored, and at $1$ both directions will be equiprobable. Biased dispersal might be useful to reproduce the configuration of cities like Iquitos, Peru, in which houses are closely connected in one dimension (sharing walls and open backyards), but more separate in the other dimension (separated by backyards or roads), or the influence of a prevailing wind. 
+
+\bigskip{}
+
+\linecmd{Long range dispersal} is where adult mosquitoes can move to any house within a certain distance of their house each day. You can set different daily dispersal rates for nulliparous females, parous females, and males, as well as the maximal distance reachable by an adult mosquito. Within that reach, the actual distance and direction are randomly selected. 
+
+\bigskip{}
+
+The distribution of containers within houses is not static, and can change from day to day. \linecmd{Container turnout rate} describes the daily probability that a container will be removed from its original house. If that happens, an identical container will be introduced in a random house, with no mosquito cohorts inside, and filled to the top with clean water. It is difficult to assess the actual dynamics of the container distribution in a real city, but Skeeter Buster allows for two possibilities: 
+\begin{enumerate}
+\item some containers do not remain forever suitable for larvae (e.g. they might be discarded or be filled in with material unsuitable for larval development), and
+\item some containers are exchanged between houses.
+\end{enumerate}
+
+\linecmd{Manually-filled containers emptying probability} is a daily probability that a manually-filled container is cleared of immature cohorts and refilled with clean water. This is useful when data is available about container usage and mimics the use by people for every-day purposes, and therefore regularly spilled out and refilled with clean water.
+
+\linecmd{IS\_IQUITOS} $=1$ accommodates some considerations for simulating Iquitos, Peru:\label{IsIquitos} 
+
+\begin{itemize}
+	\item all manually filled containers can get rain water,
+	\item manually filled containers in Iquitos only get refilled after they
+are emptied, and
+	\item manually filled containers of types \linecmd{LTANK} and \linecmd{MSTOR} never get emptied.
+\end{itemize}
+
+If one has a lot of manually filled containers in that don't get emptied very often, then one
+should specify which manually filled containers get filled/topped off even if they aren't emptied.%How?
+
+\subsection{Adulticide, larvicide, and source removal}
+
+The parameters describing these control measures are described on page \pageref{Traditionalcontrol}.
+
+\subsection{Gene Drive}
+
+A gene drive is a method for spreading a gene of interest through a population, and can be accomplished by various molecular techniques. Skeeter Buster has gene drive parameters specific to each genetic control technique.
+
+\subsubsection{Engineered Underdominance}%Define this. Heterozygote less fit.
+
+Underdominance is a scenario where heterozygous individuals are less fit than homozygotes. Underdominance can be engineered to\dots
+
+Skeeter Buster has four possible configurations of such genetic constructs. In each case \linecmd{construct a} includes an anti-pathogen allele and a lethal allele that is turned on if not matched by \linecmd{construct b}; likewise, \linecmd{construct b} includes an anti-pathogen allele and a lethal allele that is turned on if not matched by \linecmd{construct a}.
+\begin{itemize}
+	\item Scenario I (1 a, 1 b) - introduced individuals have two constructs, one of type a and one of type b.
+	\item Scenario II (1 a, 2 b) - introduced individuals have three constructs, one of type a and two of type b. 
+	\item Scenario III (1 a, 3 b) - introduced individuals have four constructs, one of type a and three of type b. 
+	\item Scenario IV (2 a, 2 b) - introduced individuals have four constructs, two of type a and two of type b. 
+\end{itemize}
+
+The assignment of constructs as \linecmd{a} and \linecmd{b} is arbitrary relative to their DNA sequence so Scenarios II and III are equivalent to scenarios with only one \linecmd{b} construct and muliple \linecmd{a} constructs.%Why would you want to add multiple constructs?
+
+The constructs may incur fitness costs varying from from $0$ (no reduction in percent egg viability compared to wild-type) to $1$ (100\% egg inviability). 
+\begin{itemize}
+	\item Linkage group $1$ is the fitness cost of the first construct, \linecmd{a} in all scenarios.
+	\item Linkage group $2$ is the fitness cost of the second construct, \linecmd{a} in Scenario IV, \linecmd{b} in Scenarios I, II, and III. 
+	\item Linkage group $3$ is the fitness cost of the third construct, \linecmd{b} in Scenarios II, III, and IV. There is no third linkage group in Scenario I.
+	\item Linkage group $4$ is the fitness cost of the fourth construct, \linecmd{b} in Scenarios III and IV. There is no fourth linkage group in Scenarios I and II.
+	\item Dominance of fitness cost - Heterozygous constructs may have less of a fitness cost than a homozygous form. Values here can range from $0$ (the trait is recessive, so heterozygotes have no fitness cost) to $1$ (the trait is completely dominant, so heterozygotes have the same fitness cost as homozygotes.) When the dominance is set to $0.5$ the fitness cost is multiplicative.
+\end{itemize}
+% Reference Yingshing Huang's work, lots of this stuff explained in his equation based model Insect Biochemistry and Molecular Biology 2007.
+
+\subsubsection{Meiotic Drive}%Define this
+
+Meiotic Drive involves two constructs: a drive allele on the male determining chromosome and an insensitive-anti-pathogen construct on the female determining chromosome. When the released engineered males mate with sensitive wild-type females, male offspring will carry the drive allele and a sensitive responder allele. They will therefore produce more than $50\%$ male-determining gametes and their offspring will have a sex ratio skewed towards males. When drive males mate with insensitive females the resulting male offspring will have insensitive response alleles on the female-determining chromosome so the sex ratio of their offspring remains $50:50$. Thus, in the following generations, the proportion of females carrying the insensitive-anti-pathogen construct will increase compared to wild-type females.%Mention always 3-4 linkage groups
+
+The success of meiotic drive may depend on the conditions of the wild-type population. The three provided scenarios look at different wild-type arrangements.
+\begin{itemize}
+	\item \linecmd{Sensitive natural population} - All wild-type individuals are sensitive to the drive allele.
+	\item \linecmd{Rare insensitive responder allele in natural population} - Most wild-type individuals are sensitive to the drive allele, but some rare individuals in the natural population carry an allele on the female-determining chromosome that is completely or partially insensitive to the drive allele.
+	\item \linecmd{Rare autosomal modifier and insensitive responder allele in the natural population}. The autosomal modifier allele is not on the female-determining chromosome and therefore segregates independently of the responder allele. When the modifier co-occurs with the sensitive allele, the responder has a weakened response to the drive allele, thus the resulting offspring sex ratio is closer to 50:50 than would otherwise occur with sensitive responder alleles.
+\end{itemize}
+
+Individuals carrying constructs may have lower fitness than wild-type individuals. Fitness costs are accounted for by reducing the number of viable eggs produced by parents with engineered constructs.
+\begin{itemize}
+	\item \linecmd{Drive gene} is the reduction in viable eggs produced by the mates of males carrying the drive gene. Values can range from 0 (no difference from the non-drive males) to 1 (all offspring are inviable).
+	\item \linecmd{Transgenic insensitive responder allele} is the reduction in viable eggs produced by individuals carrying the transgenic insensitive allele. Values can range from 0 (no difference from sensitive individuals) to 1 ($100\%$ inviable eggs). 
+	\item \linecmd{Natural insensitive responder allele} is the reduction of fecundity in individuals carrying the natural insensitive responder allele. Values can range from 0 (no difference from sensitive individuals) to 1 ($100\%$ inviable eggs). This is only relevant in Scenarios II and III.
+	\item \linecmd{Dominance of fitness costs} is the amount of fitness cost incurred by heterozygous individuals. Values can range from 0 (the allele is recessive so the fitness cost is no different than the natural sensitive population) to 1 (the allele is dominant so heterozygous individuals have the same fitness costs as homozygous individuals. When dominance is set at $0.5$ fitness effects are multiplicative.
+\end{itemize}
+
+The strength of meiotic drive determines the degree to which the drive allele biases the proportion of males in the offspring of a mating. If the drive strength is $0.1$, then the proportion of males in the offspring becomes $0.5 + 0.1 = 0.6$. If the strength of drive is $0.5$ then the proportion of males becomes $0.5 + 0.5 = 1.0$. Values inserted here should range from $0.0$ to $0.5$.
+\begin{itemize}
+	\item \linecmd{Natural sensitive responder allele} - For sensitivity this value should be $>0$ (no sex-ratio bias) and $\leq0.5$ (all male offspring).
+	\item \linecmd{Transgenic insensitive responder allele} - If the construct is perfect this value should be 0 for no sex-ratio bias.
+	\item \linecmd{Natural insensitive responder allele} should be between 0 (no sex-ratio bias) and the \linecmd{natural sensitive responder allele}. The closer to 0, the more insensitive the allele.
+	\item \linecmd{Autosomal modifier} should be between 0 (causing sensitive individuals to have no sex-ratio bias) and the \linecmd{natural sensitive responder allele}. The closer to 0, the more able the modifier to disrupt the action of the drive allele.
+\end{itemize}
+
+\subsubsection{Maternal-Effect Dominant Embryonic Arrest (Medea)}
+Medea is a selfish genetic element originally discovered in \emph{Tribolium} beetles. %Reference?
+ 
+A female carrying a Medea element will only have viable offspring if those offspring also carry Medea. Thus, the frequency of the Medea element is expected to increase in the population, unless the element incurs fitness costs.
+
+\linecmd{Number of Medea elements} is the number of unlinked Medea elements you want to consider. Each of these elements is situated at a different locus, on a different linkage group. Since one linkage group is reserved for sex determination, the total \linecmd{number of linkage groups} has to be $\geq$ the number of Medea elements $+1$.
+
+\linecmd{Cross-rescuing elements} - when there are several Medea elements acting at the same time, two scenarios can be considered:
+\begin{itemize}
+	\item \linecmd{without cross-rescue}- each element acts independently. If a female carries a Medea allele at one particular locus, her offspring have to carry a Medea allele at that very same locus to escape lethality;
+	\item \linecmd{with cross-rescue}- all elements act as one. If a female carries a Medea allele at one particular locus, her offspring can be rescued by carrying a Medea element at any other locus.
+\end{itemize}
+
+\linecmd{Fitness costs}: the fate of the Medea allele in the population is determined by various parameters described here:
+
+\linecmd{Maternal lethality} describes the additional lethality suffered by the offspring of a Medea-carrying female that do not carry Medea elements. Enter here the proportion of such offspring that effectively die. Thus, a value of $1.0$ means that no wild-type offspring can survive, $0.9$ means that $10\%$ of these offspring escape the Medea effect, and $0.0$ means no effect of the Medea factor(s). 
+
+\linecmd{Maternal fecundity loss per construct}: independently of the lethality to Medea offspring, this parameter describes the reduction in fecundity for females carrying a Medea element at one particular locus. Enter here the coefficient of reduction in the number of offspring: $0.0$ means no reduction in fecundity, $1.0$ means Medea females lay no eggs. When several Medea elements are involved, the costs for each element are multiplicative.
+
+\linecmd{Maternal fecundity loss dominance} sets the dominance of the maternal cost described above. If $c$ is the value of the cost above, and h is the value entered here, then the fecundity of females homozygous for Medea alleles at any locus is $(1-c)2$ and the fecundity of heterozygous is $(1-c)2h$. Thus, $h=0$ describes a recessive maternal cost (heterozygous have no fecundity reduction), whereas $h=1$ describes a dominant maternal cost (heterozygous have the same fecundity as homozygous). 
+
+\linecmd{Embryonic fitness cost per construct} is the cost of carrying a Medea-type element, for example if that element is a transgene carrying an effector gene. This cost is applied to the survival of eggs just after oviposition. Enter here the cost of carrying an individual Medea allele. 
+
+\linecmd{Embryonic fitness cost dominance} sets the dominance of the fitness cost. If $c$ is the value of the cost above, and h is the value entered here, then the fitness of individuals homozygous for Medea alleles at any locus is $(1-c)2$ and the fitness of heterozygous is $(1-c)2h$. Thus, h$=0$ describes a recessive fitness cost (heterozygous have no fitness reduction), whereas h$=1$ describes a dominant fitness cost (heterozygous have the same fitness as homozygous).
+
+\subsubsection{Female Killing}%Define this. Female offspring not viable.
+
+Female killing is not a gene-drive strategy \emph{per se}. Males carry an allele that is lethal in a female environment, so the offspring resulting from a transgenic male mating with a wild-type female will be half as many as in a wild-type mating and will all be male carriers of the female killing allele. 
+
+\linecmd{Fitness cost of one copy of the female killing gene to males} is reduction in the viability of male offspring produced by the mating of a construct male with any female. Any female offspring produced with a copy of the female killing gene are immediately killed, so only male offspring may suffer a reduced viability.
+
+\subsubsection{Reduce and Replace}%Need to complete these! %Define this. Female killing and anti pathogen gene. (Can just simulate anti pathogen if set ? to ?
+
+\subsubsection{Wolbachia}%Define this. Symbiont present in reproductive organs.
+
+\subsection{Output Options}\label{OutputOptions} % Need to update this. Some of these options do not work on my Mac.
+By default the output is saved in a folder \linecmd{/out} in the directory (i.e. within the same folder that Skeeter Buster program files are stored in), but this can be toggled by \linecmd{Default directory}. The first few months are an initialization period and should be ignored.
+
+\linecmd{Dated output} will create one folder called out in the main Skeeter Buster directory where it will store all the created output folders. Working within an existing out folder, the program will create another folder named by the date you run the simulation.
+
+\linecmd{HTML output} creates an HTML page which includes time series of the eggs, larvae, pupae, adults, and gene frequencies, and automatically opens the page in the default web browser when the simulation has finished. \linecmd{Don't popup browser} will create the HTML page but not automatically opened in the default browser.
+
+\linecmd{Log per house} creates a text file with a daily log on a per house basis. This is smaller than the detailed log output file, but can still reach notable size if your house setup is large.
+
+\linecmd{The Detailed Log} is a text file of cohort information for every container in the simulation.
+\begin{itemize}
+	\item \linecmd{Detailed Log} will create a text file with detailed descriptions of every container for every time step. This can be a very big file.
+	\item \linecmd{Detailed Log Start} and \linecmd{Detailed Log End} will create a detailed log only for this range of days
+\end{itemize}
+
+You can create visual snapshots of the population, where the houses are laid out on a grid, and each house square is shaded according to (i) the frequency of insects with the engineered constructs present (files named \linecmd{image*.eps}), or (ii) the number of pupae present in the house (files named \linecmd{density*.eps}). The figures are stored in out/eps. These EPS figures can be viewed by applications like Ghostview or Irfanview. Pictures (genotypes) will save a picture of the insect frequencies at certain time steps. Pictures (densities) will save a picture of the insect densities at certain time steps. Frequency controls the number of days you want between pictures.
+
+Skeeter Buster can create movies. \linecmd{Movie} will tell the computer to save the pictures to a movie format. \linecmd{GIF movie} creates a GIF format movie that only works on LINUX operating systems. \linecmd{MNG movie} creates an MNG format movie that can run on Windows operation systems if certain plug-in applications are installed.%This movie feature does not work on my Mac. Delete?
+
+\section{Setup File Settings}
+
+House setup involves adding containers, adding female adult cohorts, and adding male adult cohorts. Containers in each house have biologically relevant parameters. The first house and first container are always number $0$. You must provide the following specifications in the order below:
+
+\begin{itemize}
+	\item \linecmd{NUMBER\_OF\_HOUSES} - how many houses are in the simulation, distributed across a grid whose dimensions are controlled by \linecmd{NUMBER\_OF\_COLUMNS} and \linecmd{NUMBER\_OF\_ROWS}.
+	\item \linecmd{HOUSE\_NUMBER}
+	\item \linecmd{NUMBER\_OF\_CONTAINERS}
+\end{itemize}
+
+For each container:
+
+\begin{itemize}
+	\item \linecmd{CONTAINER\_NUMBER} - the number of the container
+	\item \linecmd{CONTAINER\_TYPE} - type of container %What are the options? Reference Amy Morrison's work. Also egg specific containers numbered 1 or 2.
+	\item \linecmd{RELEASE\_DATE} - day from which the container is available.
+	\item \linecmd{HEIGHT} - the height of the container (cm).
+	\item \linecmd{SURFACE} - the area of the water's surface in the container (cm$^{2}$).
+	\item \linecmd{COVERED} - whether or not the container is covered.
+	\item \linecmd{MONTHLY\_TURNOVER} - the proportion of mosquitoes lost out of the container on a monthly basis due to humans cleaning out containers
+	\item \linecmd{SUNEXPOSURE} - the proportion of the container that gets full sun (full shade=0, full sun=1).
+	\item \linecmd{DAILY\_FOOD\_LOSS} - the amount of food (in mg of liver powder equivalents) that is lost due to factors other than mosquito feeding.
+	\item \linecmd{DAILY\_FOOD\_GAIN} - the amount of food (in mg of liver powder equivalents) that is added to the container on a daily basis.
+	\item \linecmd{COVER\_REDUCTION} - the proportion of evaporative loss reduction in the container every day due to having a cover.
+	\item \linecmd{FILLING\_METHOD} - manually or by rain.
+	\item \linecmd{DRAWDOWN} - the volume of water (in liters) removed from the container daily.
+	\item \linecmd{WATERSHED\_RATIO} - the area beyond the surface area that drains into the container on rain events. For example, if a bottle has a funnel at it's top, the amount of rain draining into the container is the bottle's surface area plus the added surface area from the funnel.
+	\item \linecmd{INITIAL\_WATER\_LEVEL} - the initial water level of the container measured vertically from the bottom of the container (cm).
+	\item \linecmd{INITIAL\_LARVAL\_FOOD} - the amount of food initially in the container (mg of liver powder equivalents)
+	\item \linecmd{NUMBER\_OF\_INITIAL\_EGG\_COHORTS}
+\end{itemize}
+
+Each egg cohort:
+
+\begin{itemize}
+	\item \linecmd{NUMBER\_OF\_EGGS} - size of this egg cohort, e.g. 20 \cite{xu2010understanding}
+	\item \linecmd{LEVEL\_LAID} - the distance from the bottom of the container that the eggs or larvae were laid at (cm). This should be close to the initial water level.
+	\item \linecmd{PHYS\_DEV} - the physiological development level of the cohort you are adding (usually 0)
+	\item \linecmd{AGE} - the number of days old the cohort is.
+	\item \linecmd{MATURE} - specifies whether the eggs have already reached the development threshold before being added (1=yes, 0=no).
+	\item \linecmd{RELEASE\_DATE} - the day of the simulation when the cohort is released
+	\item \linecmd{GENOTYPE} - the numerical code for the genotype of the cohort (Table \ref{table:genotypes})
+	\item \linecmd{WOLBACHIA} - the presence (1) or absence (0) of \emph{Wmelpop} in the cohort
+\end{itemize}
+
+For each female adult cohort:
+
+\begin{itemize}
+	\item \linecmd{NUMBER\_OF\_FEMALES}
+	\item \linecmd{PHYS\_DEV} - the physiological development level of the cohort you are adding (usually 0)
+	\item \linecmd{AGE} - the number of days old the cohort is.
+	\item \linecmd{AVERAGE\_WEIGHT} - the mean body mass (g) of individuals in the cohort
+	\item \linecmd{MATURE}
+	\item \linecmd{NULLIPAROUS} - is whether these females are virgins (0) or are able to lay eggs (parous, 1).
+	\item \linecmd{GENOTYPE} - the numerical code for the genotype of the cohort (Table \ref{table:genotypes})
+	\item \linecmd{RELEASE\_DATE} - the day of the simulation when the cohort is released
+	\item \linecmd{WOLBACHIA} - the presence (1) or absence (0) of \emph{Wmelpop} in the cohort
+	\item \linecmd{MATED}
+	\item \linecmd{MALE\_GENOTYPE}
+\end{itemize}
+
+For each male adult cohort:
+
+\begin{itemize}
+	\item \linecmd{NUMBER\_OF\_MALES}
+	\item \linecmd{PHYS\_DEV} - the physiological development level of the cohort you are adding (usually 0)
+	\item \linecmd{AGE} - the number of days old the cohort is.
+	\item \linecmd{AVERAGE\_WEIGHT} - the mean body mass (g) of individuals in the cohort
+	\item \linecmd{MATURE}
+	\item \linecmd{GENOTYPE} - the numerical code for the genotype of the cohort (Table \ref{table:genotypes})
+	\item \linecmd{RELEASE\_DATE} - the day of the simulation when the cohort is released
+	\item \linecmd{WOLBACHIA} - the presence (1) or absence (0) of \emph{Wmelpop} in the cohort
+\end{itemize}
+
+\subsection{Genotypes}
+The method for indicating mosquito genotypes is by a numerical code relating to its binary representation, e.g. 0 = female, 1 = male. Make sure the number of genes you specify matches the genotypes.
+
+\begin{tabular}[h]{llll}
+\hline{}
+Gene & Female & Male & Meaning\\
+\hline{}1 & 0 & 1 & needed to assign sex of offspring\\
+2 & 12 & 13 & e.g. anti-pathogen gene only\\
+3 & 60 & 61 & e.g. female killing and anti-pathogen\\
+4 & 252 & 253 & ?\\	
+5 & 1020 & 1021 & ?\\	
+etc. & etc. & etc. &  \\
+\hline
+\label{table:genotypes}
+\end{tabular}
+
+\section{Skeeter Buster output}
+Output files are stored in a subfolder called \linecmd{out}, and are labeled with a reference number (format: refX). For each date, a log of the different runs is kept in the file \linecmd{simulations.log}, where each run is stored with its reference number and some basic information about the parameters. Skeeter Buster can generate various outputs, and parameters to select these are specified on page \pageref{OutputOptions}.
+
+\subsection{Log text files}
+%Add info
+
+%Short_Output.ref1.txt summarizes Skeeter Buster on each day, e.g. total number of female mosquitoes (first column?). Get the names of the columns!
+%forSBEED.txt
+
+%Mother-daughter relationships
+
+\subsection{HTML time series graphs}
+
+%Specify which graphics are not generated on a Mac
+Time series can show the age structure of the population, and whether certain gene frequencies have gone to fixation or extinction in the population. The actual figures for the HTML files created according to your parameters are all stored in the \linecmd{image} subfolder as .png files. These files can be copied into presentations, magnified, and rotated just as you can a .gif or .jpg file. On all time series graphs, the x-axis is days. On stage-specific graphs, the y-axis is the number of individuals. On gene frequency graphs, the y-axis is the proportion of individuals in the population that have the specific allele.
+
+Provided that you run the model with more than one house, spatial statistics describing the state of the population on the last day are provided in HTML output. \cite{getis2010characteristics} describe the statistics used. This %which
+statistic describes the level of clustering within the population and describes the association of high or low values among houses separated by a distance lower or equal to a given distance $d$.
+
+\subsubsection{Grid version of Skeeter Buster}
+
+On the top panel, you will find the raw values of these statistics, plotted against the cut-off distance $d$. There are four different curves, corresponding to calculations for two variables. A dummy variable that describes the presence (1) or absence (0) of a house. When the statistic is calculated with this value, it describes the clustering of the houses themselves (curves labeled $L(d)$ and $L*(d)$), and the number of pupae present within each house. When the statistic is calculated with this value, it describes the clustering of the pupae among the whole city (curves labeled $Lw(d)$ and $Lw*(d)$). For each of these variables, this statistic can be calculated in two ways (hence the four curves), depending on the inclusion of each house as being within a distance $<d$ to itself (curves labeled with an asterisk do include this focal house). Under the assumption of spatial randomness, this statistic has an expectation of $d$. A value higher than this expectation indicates clustering at that particular scale (clusters of size $d$), a value lower than the expectation indicating uniform (non-random) distribution.
+
+Houses are uniformly distributed on a grid and are not randomly distributed, hence the statistic is consistently less than expected. This affects the distribution of pupae, which is what we are most interested in. Therefore, rather than looking at these raw computations, we plot, in the bottom panel, the difference between the statistic calculated with the number of pupae, and the one calculated with the dummy house variable. This difference shows more accurately the actual distribution of pupae among houses, getting rid of the effect of the house grid distribution. If there is no additional clustering of the number of pupae, we expect these two statistics to be equal, and thus the plotted difference to be 0. Note again that these statistics can be computed with or without including the focal house, hence the two different curves. If the curves in the bottom panel are consistently $>0$, there is actual clustering at the corresponding scale (given on the $x$-axis). On the other hand, curves remaining at or around 0 indicate a random spatial distribution.
+
+\subsubsection{Neighbour list version of Skeeter Buster}
+
+%Still need to sort out the preprocessing here
+
+\subsection{Area rugs}
+
+Area rugs named \linecmd{image*.eps} show the spatial distribution of gene frequencies. On each graph, the simulated houses are shown as squares on a grid. The squares are shaded to indicate the gene frequencies, white squares representing empty houses, light grey indicating $100\%$ wild type, black for $100\%$ engineered individuals, and a shade of a given color for frequencies in between, with lighter squares being predominately wild-type individuals and darker squares being predominantly individuals carrying the introduced transgene. A single area rug shows the spatial distribution of the transgene construct at any point in time. A series of area rugs can be animated to create a time series movie. Watching these area rug movies can give you a sense of how the spatial distribution changes over time. Based on the same idea, area rugs named \linecmd{density*.eps} (located in the same folder) show the densities of individuals (more precisely the number of pupae) within each house at any given time. Here again, white squares figure empty houses, whereas a color shade pictures the range of the number of pupae, with higher numbers for darker colors.
+
+\section{Some Examples}
+
+The above parameters can be adjusted ad libitum, but the number of possibilities can be daunting. To get a feel for Skeeter Buster, we have some template files, for parameter configuration (\linecmd{*.conf}) as well as house setup (\linecmd{*.setup}), which you can use to launch simulations, and modify for your own purposes.
+
+All house setups included here are based on data from an intensive survey of the city of Iquitos, Peru (we thank Amy Morrison for sharing these data). Therefore, the number and variety of containers in the simulated houses reflects real containers.
+
+The default setup file includes $153$ houses, based on an actual neighborhood in Iquitos and includes our best estimates for model parameters. We provide some other templates that deviate from these settings to show the effect of certain parameters and two genetic control methods.
+
+\subsection{Configuration File Templates}
+\begin{itemize}
+	\item \linecmd{LRD.conf} - identical to the default, with long range adult dispersal (daily probability of $0.02$).
+	\item \linecmd{no long range.conf} - all long range movement of adults or containers suppressed.
+	\item \linecmd{high movement.conf} - high probabilities of long range movement (long range adult dispersal probability $=0.05$, container turnout probability $=0.003$).
+	\item[] Visualize the effects of the border conditions on the population dynamics, which is particularly interesting when combined with house setups introducing engineered mosquitoes.
+	\item \linecmd{sticky borders.conf}
+	\item \linecmd{random borders.conf}
+\end{itemize}
+
+\subsection{Setup File Templates}
+
+\begin{itemize}
+	\item \linecmd{low food.setup} - daily food gain reduced by 20\%.
+	\item \linecmd{high food.setup} - daily food gain increased by 50\%.
+	\item \linecmd{large.setup} - a larger grid, repeating randomizations of a 153-house block 6 times.
+	\item[] With an Engineered Underdominance genetic strategy.
+	\item \linecmd{EU 7x7.setup} - engineered individuals are released in a 7x7 block of houses in the center of the grid.
+	\item \linecmd{EU 13x17.setup} - engineered individuals are released in a 13x17 block of houses in the center of the grid.
+	\item \linecmd{EU uniform.setup}: based on \linecmd{large.setup}, in which engineered individuals with EU constructs (type I) are released on day 365, with a random release in $50\%$ of the houses.
+	\item[] With a Meiotic Drive genetic strategy:
+	\item SetupTemplate5a \linecmd{MD 7x7.setup}
+	\item SetupTemplate5b \linecmd{MD 13x17.setup}
+	\item SetupTemplate5c \linecmd{MD uniform.setup}
+\end{itemize}
+
+\subsection{What happens during a Skeeter Buster simulation?}
+%Order of events?
+%Stochasticity, random number generation
+%Insert Magori et al. 2009 flow diagram?
+
+\newpage{}
+
+\section{Running Skeeter Buster Extension for the Epidemiology of Dengue}
+
+To compile SBEED, you need two header files and five C++ files:
+\begin{itemize}
+	\item \linecmd{main.cpp}
+	\item \linecmd{simulation.cpp}
+	\item \linecmd{simulation.h}
+	\item \linecmd{utils.h}
+\end{itemize}
+
+The code to compile SBEED in Terminal is: \shellcmd{g++ -std=c++11 -O3 -o Sbeed main.cpp simulator.cpp}
+
+If you have altered the source code and want to check it during compilation you can flag most errors using: \shellcmd{g++ -std=c++11 -O3 -o Sbeed main.cpp simulator.cpp -Wall -Wextra -Wformat-nonliteral -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-declarations -Wmissing-include-dirs -Wnoexcept -Wold-style-cast -Woverloaded-virtual -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wswitch -default -Wundef -Werror -Wno-unused -Wstrict-overflow=5 -Wsign-conversion -pedantic}
+
+%SBEED will not compile using the \linecmd{-Wsign-conversion} flag since it generates warnings when \linecmd{int}s are used to define the size of vectors, while \linecmd{size\_type} of vectors is an \linecmd{unsigned int}. This signed to unsigned conversion would only be an issue if negative \linecmd{int}s were used to define the size of a vector, which should never occur.%Also old-style casting.
+
+To run SBEED, in your working directory you need:
+\begin{itemize}
+	\item Executable file called \linecmd{Sbeed}
+	\item Folder called \linecmd{parameters} containing four textfiles
+	\item Output file from Skeeter Buster called \linecmd{forSbeed.txt}
+	\item Input file describing the activity space of each person alive at the start of the simulation. Each row is a place visited by a person. Columns are:
+	\begin{itemize}
+		\item ID,
+		\item sex (male $1$, or female $0$),
+		\item age (in days),
+		\item BMI (weight in kg / height in m),
+		\item frequency of visits,
+		\item duration of visits,
+		\item location visited,
+		\item location visited in older age category,
+		\item distance between location and home,
+		\item distance between the older location and home.
+	\end{itemize}
+	\label{ActivitySpace}
+	%\item Folder containing human movement files (created using AlexHuman Movement.R)
+\end{itemize}
+
+The code to run SBEED in the Terminal is: \shellcmd{./Sbeed forSbeed.txt}
+
+%All called together and output files shunted to batch output file using doSBEED.sh unix script. Just need to toggle the batch name? (Or can I skip this step and read out of the parameter file?textfile
+
+\section{SBEED Parameter Files}
+
+One textfile specifies the path to the relevant Skeeter Buster output with a header describing the extent of the simulation (houses, columns, rows, days), and genetic control method, followed by the average daily temperature, and, bookended by @ signs, the mosquitoes alive on that day. Columns describing each mosquito are location, mosquito ID, age (in days), genotype, body mass (in grams), and development stage (units?).
+
+The parameters are provided in the three textfiles according to their C++ type: \linecmd{strings.txt} contains strings, \linecmd{integers.txt} contains integers, and \linecmd{doubles.txt} contains doubles, and imported cases are specified in a fourth textfile.
+
+String parameters denote the type of simulations in a way that will be recognizable to the user
+\begin{itemize}
+	\item \linecmd{BATCHNAME} for the phenomenon being studied
+	\item \linecmd{PARAMETERSET} names the parameters being used
+\end{itemize}
+
+The integer parameters are:
+\begin{itemize}
+	\item \linecmd{DHA\_EIP} %Need to introduce EIP idea then concisely explain the parameters
+	\item \linecmd{RUNS} is the number of simulations to be done using the same parameter set but different random numbers
+	\item \linecmd{RANDOM\_NUMBER\_SEED} is the seed for the Ziff four tap random number generator
+	\item \linecmd{DAILY\_VACCINATIONS} is the number of people being vaccinated each day
+	\item \linecmd{ONEOFF\_VACCINATIONPC} is the number of people vaccinated at the outset, mimicking a prior, large vaccination campaign
+	\item \linecmd{DAILY\_BLOODMEALS\_PER\_MOSQUITO} is the number of attempts mosquitoes make to get a bloodmeal (a combination of probing and biting). We are considering revising the model to have probing (saliva from mosquito to human) and biting (blood from human to mosquito) as separate processes
+	\item \linecmd{NUMBER\_OF\_HUMANS} is the number of people in Iquitos
+	\item \linecmd{AVERAGE\_SIZE\_ACTIVITYSPACE} is the mean number of places people in Iquitos visit.%Include other movement parameters?
+\end{itemize}
+
+The double parameters are:
+\begin{itemize}
+	\item \linecmd{R}
+	\item \linecmd{RHO25\_EIP} 
+	\item \linecmd{THALF\_EIP} 
+	\item \linecmd{DHH\_EIP} 
+	\item \linecmd{PROBA\_OF\_INFECTION\_ON\_BITE\_BY\_INFECTIOUS\_MOSQUITO} is the probability that a person bitten by an infectious mosquito becomes infected
+	\item \linecmd{PROBA\_OF\_INFECTION\_ON\_BITE\_OF\_INFECTIOUS\_HOST} is the probability that a mosquito biting a viremic person becomes infected
+	\item \linecmd{DOUBLE\_MEAL\_BY\_WEIGHT\_LO\_WEIGHT} is the lower weight in the double meal relationship
+	\item \linecmd{DOUBLE\_MEAL\_BY\_WEIGHT\_HI\_WEIGHT} is the upper weight in the double meal relationship
+	\item \linecmd{DOUBLE\_MEAL\_BY\_WEIGHT\_LO\_PROBA}  is the lower probability in the double meal relationship
+	\item \linecmd{DOUBLE\_MEAL\_BY\_WEIGHT\_HI\_PROBA} is the higher probability
+	\item \linecmd{PROBA\_INTERRUPTED\_BLOODMEAL} is the probability that a mosquito is interrupted during feeding and switches host
+	\item \linecmd{PROBABILITY\_OF\_REFRACTORINESS\_OF\_TRANSGENICS} is the probability that genetic control makes an individual mosquito resistant to dengue.
+	\item \linecmd{PROBA\_VACCINE\_PROTECTS} is the probability that a vaccinated person becomes resistant to dengue
+	
+	\item \linecmd{INFECTIOUS\_MOSQUITO\_THRESHOLD\_VIREMIA} is the concentration of virus above which a mosquito will be infectious
+	\item \linecmd{DAY\_SYMPTOMS\_START\_AFTER\_INFECTION\_MEAN} is the mean number of days following an infectious bite that a person will peak in their viremia and could develop symptoms
+	\item \linecmd{DAY\_SYMPTOMS\_START\_AFTER\_INFECTION\_SD} is the standard deviation of the number of days following an infectious bite that a person will peak in their viremia and could develop symptoms
+	\item \linecmd{DAYS\_SYMPTOMS\_LAST\_FOR\_MEAN} is the mean number of days following the peak in their viremia and onset of symptoms that a person will be ill for after which people recover
+	\item \linecmd{DAYS\_SYMPTOMS\_LAST\_FOR\_SD} is the standard deviation number of days following the peak in their viremia and onset of symptoms that a person will be ill for after which people recover
+	\item \linecmd{PROBABILITY\_SYMPTOMATIC} is the probability that a person will actually develop symptoms on the day that viremia peaks
+	\item \linecmd{PROBABILITY\_TRANSMISSION\_SD} is the standard deviation of transmission probabilities around the day that viremia peaks
+	\item \linecmd{THRESHOLD\_DISTANCE\_IF\_SYMPTOMATIC} is the distance beyond which symptomatic individuals do not travel
+	\item \linecmd{ANNUAL\_BIRTH\_RATE} is the proportion of females giving birth per year%Need to check that I calculated this per female and not per person
+	\item \linecmd{FEMALE\_FERTILITY\_STARTS} is the age at which females can start giving birth
+	\item \linecmd{FEMALE\_FERTILITY\_ENDS} is the age at which females stop giving birth
+	\item \linecmd{DAILY\_PROBABILITY\_OF\_DEATH} is the uniform probability of dying on a given day%Vary this by age and sex
+	
+\end{itemize}
+
+\section{Understanding SBEED output}
+
+Each run of the model produces one log output file, i.e. \newline{}\linecmd{Batch}BATCHNAME\linecmd{\_ParameterSet}PARAMETERSET\linecmd{\_}RUN. You can toggle the details included in the log file using\dots %elaborate
+
+\newpage{}
+\bibliographystyle{unsrt}
+\bibliography{SBmanual-refs}
+
+\newpage{}
+
+\section*{Appendix 1: SBEED Objects} % Need to reference this somewhere in the main text of the manual
+%Could I make a summary of the SkeeterBuster building objects?
+\input{../../../SBEED/me/Sbeed/documents/classes/classes.tex}%Update this
+
+\newpage{}
+\section*{Appendix 2: SBEED Diagrams}
+\smallskip{}
+ \begin{figure}[h]\includegraphics[scale=0.45]{/Users/ecg/Documents/reading/modelling/dengue/stochastic/SBEED/me/Sbeed/documents/modeldiagrams/ModelFlowchartRevised.pdf}\caption{Inputs to the model, and major processes being simulated}\end{figure}
+ \begin{figure}\includegraphics[scale=0.27]{/Users/ecg/Documents/reading/modelling/dengue/stochastic/SBEED/me/Sbeed/documents/modeldiagrams/SBEEDIndividualsRevised.pdf}\caption{Cartoon representation of the movement and infected status of locations, people and mosquitoes captured in the simulation.}\end{figure}
+ \begin{figure}\includegraphics[scale=0.45]{/Users/ecg/Documents/reading/modelling/dengue/stochastic/SBEED/me/Sbeed/documents/modeldiagrams/Heterogeneities.pdf}\caption{Major processes of the model where we are interested in individual differences.}\end{figure}
+ \begin{figure}\includegraphics[scale=0.65]{/Users/ecg/Documents/reading/modelling/dengue/stochastic/SBEED/me/Sbeed/documents/modeldiagrams/anotherdiagram.pdf}\caption{Input to the model provided at the start and each day, as well as the processes that are simulated each day. Images indicate the characteristics of individuals that can affect each process.}\end{figure}
+ 
+
+\end{document}
