@@ -1,0 +1,11 @@
+message,field,value
+## like days.250, with immature sampling
+sim,number_of_days,50
+sample,do_adult_sampling,TRUE
+sample,do_cont_sampling,TRUE
+##
+sim,start_date,'1999-01-01'
+sim,disable_humid,TRUE
+## old but required as of 2016-05-21
+sim,n_col,57
+sim,n_row,44

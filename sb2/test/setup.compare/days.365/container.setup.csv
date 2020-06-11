@@ -1,0 +1,2 @@
+location_code,container_number,container_type,cover_reduction,covered,daily_food_gain,daily_food_loss,drawdown,filling_method,height,initial_larval_food,initial_water_level,monthly_turnover,sunexposure,surface,watershed_ratio,release_date,id_egg,id_larva,id_pupa
+1,20,5,0,0,5,0.1,0,2,26,0,0,0,0,3000,1,0,0,0,0

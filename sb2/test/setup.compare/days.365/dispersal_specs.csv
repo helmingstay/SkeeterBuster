@@ -1,0 +1,3 @@
+self,link,weight
+## comments ok
+## weight can be integer, will be normalized

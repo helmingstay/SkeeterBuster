@@ -1,0 +1,6 @@
+id_pupa,date,number,phys_devel_percent,age,mature,genotype,wolbachia,avg_weight,avg_lipid_reserve
+## use id > 0 (0 -> no release)
+## ids match container setup, col id_pupa
+## (date == 0) -> first day of sim
+1,4,4,0.4,4,0,0,0,0.4,0.4
+1,4,4,0.45,4,0,1,0,0.45,0.4

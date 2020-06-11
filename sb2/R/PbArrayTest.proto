@@ -1,0 +1,13 @@
+syntax = "proto2";
+package PbTest;
+
+message array {
+    repeated bool   vec1 = 10;
+    repeated int32  vec2 = 20;
+    repeated string vec3 = 30;
+}
+
+// aa = new(P("PbTest.array", file='PbTest.proto'))
+// aa$add(values= -2:2, field='vec2')
+// aa$vec1[3] <- 3
+// see https://developers.google.com/protocol-buffers/docs/reference/cpp-generated#fields

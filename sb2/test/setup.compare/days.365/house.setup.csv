@@ -1,0 +1,4 @@
+location_code,block_code,id_adult_m,id_adult_f
+## id_adult_* release: 0 = no release
+## otherwise, matches release_adult_*.csv id
+1,A,1,1

@@ -1,0 +1,11 @@
+message,field,value
+sim,disable_humid,TRUE
+## this fails in forSbeed at last decimal of precision?
+sim,number_of_days,25
+##
+output,do_Output_per_Container_Type,TRUE
+output,do_output_for_sbeed,TRUE
+##
+sim,n_col,57
+sim,n_row,44
+sim,start_date,'1999-01-01'

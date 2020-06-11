@@ -1,0 +1,5 @@
+id_adult_f,date,number,phys_devel_percent,age,average_weight,mature,nulliparous,genotype,wolbachia,mated,male_genotype
+## use id > 0 (0 -> no release)
+## ids match house setup, col id_adult_f
+## (date == 0) -> first day of sim
+1,6,6,0.6,6,0.6,0,1,0,0,0,0

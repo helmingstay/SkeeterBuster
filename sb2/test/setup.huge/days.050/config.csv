@@ -1,0 +1,29 @@
+message,field,value
+## emily test run
+##
+sim,number_of_days,50
+##
+sim,start_date,'2002-01-01'
+## for compatibility
+sim,disable_humid,TRUE
+#
+container,probability_of_emptying_manually_filled_containers,0.11
+##
+dailysurvival,female_adult_low_temperature,0.65
+dailysurvival,female_adult_normal_temperature_lower_limit,23.3
+dailysurvival,female_adult_normal_temperature_upper_limit,28.1
+dailysurvival,female_adult_high_temperature,0.65
+## 
+dispersal,nulliparous_female_adult_long_range_dispersal,1
+dispersal,parous_female_adult_long_range_dispersal,1
+dispersal,male_adult_long_range_dispersal,1
+dispersal,container_movement_probability,0
+##
+geneticcontrol,genetic_control_method,0
+geneticcontrol,tetracycline,0
+#
+larvicide,prespecify_larval_treatment,0
+nominaldailysurvival,skeeter_buster_female_adults,0.97
+## old but required as of 2016-05-21
+sim,n_col,30009
+sim,n_row,1

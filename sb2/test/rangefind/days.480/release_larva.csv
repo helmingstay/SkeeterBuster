@@ -1,0 +1,4 @@
+id_larva,date,number,avg_weight,phys_devel_percent,age,mature,genotype,wolbachia
+## use id > 0 (0 -> no release)
+## ids match container setup, col id_larva
+## (date == 0) -> first day of sim

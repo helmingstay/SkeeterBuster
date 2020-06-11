@@ -1,0 +1,6 @@
+id_egg,date,number,level_laid,phys_devel_percent,age,mature,genotype,wolbachia
+## use id > 0 (0 -> no release)
+## ids match container setup, col id_egg
+## (date == 0) -> first day of sim
+1,0,20,0,1,0,1,0,0
+1,0,20,0,1,0,1,1,0

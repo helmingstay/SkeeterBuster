@@ -1,0 +1,21 @@
+message,field,value
+sim,number_of_days,365
+sim,start_date,'2000-01-21'
+sim,disable_humid,FALSE
+## old but required as of 2016-05-21
+sim,n_col,1
+sim,n_row,1
+## output
+output,do_compare_cont,TRUE
+## default - container means
+#output,compare_cont_mean,TRUE
+output,do_compare_house,TRUE
+#output,do_minimal_output,FALSE
+## all else false
+output,do_simlog,FALSE
+output,do_short_output,FALSE
+## Adult release
+runtime,file_release_adult_m,'release_adult_m.30.csv'
+runtime,file_release_adult_f,'release_adult_f.30.csv'
+## ssssssh
+runtime,quiet,TRUE

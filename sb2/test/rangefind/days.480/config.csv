@@ -1,0 +1,32 @@
+message,field,value
+##
+sim,start_date,'2012-04-22'
+sim,number_of_days,480
+sim,dispersal_lr_block,TRUE
+runtime,compress_output,TRUE
+## minimal output...
+output,do_simlog,FALSE
+output,do_minimal_output,FALSE
+output,do_short_output,FALSE
+output,do_day_house,TRUE
+## testing
+output,do_migrate,TRUE
+## Field conditions
+sample,do_adult_spraying,TRUE
+sample,do_cont_sampling,TRUE
+sample,do_adult_sampling,TRUE
+## From Gonzolo
+sample,proportion_of_adult_females_sampled,0.29
+sample,proportion_of_adult_males_sampled,0.29
+## From control cages
+sample,adult_spraying_efficacy,0.91214285714285714
+## Unconstrained estimates of migration
+dispersal,nulliparous_female_adult_dispersal,0.1
+dispersal,parous_female_adult_dispersal,0.1
+dispersal,male_adult_dispersal,0.1
+## LR
+dispersal,nulliparous_female_adult_long_range_dispersal,0.01
+dispersal,parous_female_adult_long_range_dispersal,0.01
+dispersal,male_adult_long_range_dispersal,0.01
+##??
+dispersal,container_movement_probability,0

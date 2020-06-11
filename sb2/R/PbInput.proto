@@ -1,0 +1,822 @@
+//    Copyright 2015-2020 Christian Gunning (code@x14n.org)
+//    This file is part of Skeeter Buster.
+
+syntax = "proto2";
+package PbInput;
+// in C++ use like:
+// get: PbSim.reproduction_mode()
+// set: PbSim.set_init(true)
+// Files read into C++ via PbRead.h
+// NOTE: in C++, members are all-lowercase
+
+// All paths relative to this file
+
+// set at compile-time, one per build
+message PbVersion {
+    optional string version_file = 10 [default = ".proto.PbVersion.dat"];
+    optional string branch = 20;
+    optional string commit = 30;
+    optional string build_datetime = 40;
+}
+
+// Master message, contains all other messages
+// used by R/C++ to specify behavior 
+message PbBuild {
+    // name of file to serialize this msg to
+    optional string file = 2 [default = ".proto.PbBuild.dat"];
+    // 
+    optional PbVersion version = 10;
+    optional PbInstall install = 16 ;
+    optional PbRuntime runtime = 20 ;
+    optional PbOutput output = 30 ;
+    optional PbSim sim = 40 ;
+    optional PbSample sample = 50 ;
+    optional PbEgg egg = 60 ;
+    optional PbContainer container = 64 ;
+    optional PbMedea medea = 70 ;
+    optional PbWolbachia wolbachia = 80 ;
+    optional PbEngUnderdom engunderdom = 90 ;
+    optional PbMeioticDrive meioticdrive = 100 ;
+    optional PbFemKillRescue femkillrescue = 110 ;
+    optional PbDispersal dispersal = 120 ;
+    optional PbNominalDailySurvival nominaldailysurvival = 130 ;
+    optional PbDailySurvival dailysurvival = 200 ;
+    optional PbGeneticControl geneticcontrol = 210 ;
+    optional PbEnzyme enzyme = 220 ;
+    optional PbFemaleLarvae femalelarvae = 230 ;
+    optional PbMaleLarvae malelarvae = 240 ;
+    optional PbAdulticide adulticide = 250 ;
+    optional PbLarvicide larvicide = 260 ;
+    optional PbSourceRemoval sourceremoval = 270 ;
+    optional PbStableAgeDist stableagedist = 280 ;
+    optional PbAgeDepSurv agedepsurv = 290 ;
+    optional PbControl control = 310 ;
+    optional PbDevel devel = 320 ;
+}
+
+// machine / install dependent details
+// paths relative to here (R folder)
+message PbInstall {
+    optional string bin_path = 30 [default = '.' ];
+    optional string bin_name = 40 [default = 'SkeeterBuster' ];
+    // test if a directory contains a file with this name 
+    optional string test_file = 70 [default = '000TESTME' ];
+    optional string file_schema = 80 [default = "weather_schema.sql"];
+    // use R to prep model input weather from WMO data
+    // weather file is WMO GSOD, data will be trimmed 
+    // http://www7.ncdc.noaa.gov/CDO/GSOD_DESC.txt for details (use FTP site)
+    // https://www7.ncdc.noaa.gov/CDO/cdoselect.cmd?datasetabbv=GSOD&countryabbv=&georegionabbv=
+    // station data (from ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv)
+    // "USAF","WBAN","STATION NAME","CTRY","STATE","ICAO","LAT","LON","ELEV(M)","BEGIN","END"
+    // "843770","99999","CORONEL FRANCISCO SECADA VIGNETTA INTL","PE","","SPQT","-03.785","-073.309","+0093.3","19730101","20170716"
+
+    // within start_date to number_of_days (PbSim)
+    // path relative to test/
+    optional string file_weather_all = 100 [default = "IquitosWeatherAll.csv.gz"];
+    // WMO codes for NA, Replace with NA
+    optional string weather_regex_na = 110 [default = "99[.]99|999[.]9|9999[.]9"];
+    // WMO quasi-meta-data at end of numeric, 
+    // replace with comma
+    // but not first row
+    optional string weather_regex_strip = 120 [default = "[*]|[A-Z]"];
+    // filename of sqlite db
+    optional string weather_db = 130;
+    // name of sql table, hard-coded into schema file
+    optional string weather_table = 140 [default = "sql_weather"];
+}
+
+// Things set/used at runtime
+message PbRuntime {
+    // behavior at runtime
+    optional bool quiet = 10 [default = false ];
+    optional int32 verbose = 20 [default = 0 ];
+    // number of days between progress update (if verbose)
+    optional int32 report_freq = 24 [default = 5 ];
+    optional bool debug = 30 [default = false ];
+    // when run occured
+    optional string run_datetime = 80;
+    // 100s: files,paths 
+    optional string dir_in = 100;
+    // use dir_out to guarantees uniqueness per-process
+    // write out "keep" files to dir_out at end
+    // keep main proto run file here
+    // all other output specs go in PbOutput
+    optional string dir_out = 110;
+    // shared between runs, 
+    optional string dir_temp = 120 ;
+    // main csv file of run-specific parameters
+    // over-rides protobuf defaults
+    optional string file_config = 130 [default='config.csv'];
+    // specs file
+    // R writes weather needed for single run to this csv
+    optional string file_weather = 140 [default = "weather.csv"];
+    // one row per house (or container), 
+    // header as first row, 
+    // comment lines start w/#
+    optional string file_house = 160 [default = "house.setup.csv"]; 
+    optional string file_container = 170 [default = "container.setup.csv"]; 
+    // neighbor connections
+    // self id, neighbor id, link-weight
+    optional string file_dispersal_house = 180 [default = "dispersal_specs.csv"];
+    // as above, but between blocks
+    // LR migration
+    optional string file_dispersal_block = 190 [default = "dispersal_block.csv"];
+    // larvicide
+    // date, house, container 
+    optional string file_larvicide  = 200 [default = "larvicide_spec.csv" ];
+    // release prototype specification
+    optional string file_release_egg = 210 [default = "release_egg.csv"];
+    optional string file_release_larva = 212 [default = "release_larva.csv"];
+    optional string file_release_pupa = 213 [default = "release_pupa.csv"];
+    optional string file_release_adult_m = 220 [default = "release_adult_m.csv"];
+    optional string file_release_adult_f = 230 [default = "release_adult_f.csv"];
+    // gzip output after run?
+    optional bool compress_output = 300 [default = false];
+    // ?? should in_adult_sampling et al go here?
+}
+
+// control output
+// do_ vars are boolean switches, 
+// filename follows
+// Filenames previously hard-coded into cpp
+message PbOutput {
+    optional bool do_simlog = 10 [default = true];
+    optional string sim_log = 12 [default = "simulations.log"];
+    // reporting
+    optional bool do_output_for_sbeed = 20 [default = false];
+    optional string output_for_sbeed = 22 [default = "forSbeed.ref"];
+    // was log_per_house
+    optional bool do_Output_per_House = 30 [default = false];
+    optional string Output_per_House = 32 [default = "Output_per_House.ref"];
+    optional bool do_Output_Water_Level = 40 [default = false];
+    optional string Output_Water_Level = 42 [default = "Output_Water_Level"];
+    optional bool do_Output_per_Container = 44 [default = false];
+    optional string Output_per_Container = 46 [default = "Output_per_Container.ref"];
+    optional uint32 Output_per_Container_start_date = 48 [default = 0];
+    optional bool do_Output_per_Container_Type = 50 [default = false];
+    optional string Output_per_Container_Type = 52 [default = "Output_per_Container_Type.ref"];
+    optional bool do_detailed_log = 60 [default = false];
+    optional string detailed_log = 62 [default = "Detailed_Output.ref"];
+    optional uint32 detailed_log_start = 64 [default = 0];
+    optional uint32 detailed_log_end = 66 [default = 0];
+    // daily totals reporting
+    optional bool do_minimal_output = 80 [default = true];
+    optional string minimal_output = 90 [default = "minimal.csv"];
+    optional bool do_short_output = 100 [default = true];
+    optional string short_output = 110 [default = "Short_Output.txt"];
+    // not currently working: xian 2016-07-27
+    optional bool do_save_final_state_as_setup_file = 120 [default = false];
+    optional string save_final_state_as_setup_file = 130 [default = "SkeeterBuster.final.ref"];
+    // model comparison
+    // container
+    optional bool do_compare_cont = 140 [default = false];
+    optional string compare_cont = 150 [default = "compare_cont.csv"];
+    // compute container means, one row per day
+    // "container" col shows total # containers
+    optional bool compare_cont_mean = 152 [default = true];
+    // house
+    optional bool do_compare_house = 160 [default = false];
+    optional string compare_house = 170 [default = "compare_house.csv"];
+    // daily results by house
+    optional bool do_day_house = 180 [default = false];
+    optional string day_house = 190 [default = "day_house.csv"];
+    // migration reporting
+    optional bool do_migrate = 200 [default = false];
+    optional string migrate = 210 [default = "migrate.csv"];
+    
+    //////////////////////
+    // output - csv
+    //////////////////////
+    // daily per-house record
+    // stub
+    optional bool do_csv_house = 220 [default = false];
+    optional string csv_house = 230 [default = "out_house.csv"];
+}
+
+// simulation controls
+message PbSim {
+    optional int32 seed = 10 [default = 2424]; 
+    optional uint32 number_of_days = 20 [default = 12];
+    optional uint32 n_house = 30 ;
+    // total containers
+    optional uint32 n_container = 32 ;
+    // rows in container file
+    optional uint32 n_cont_row = 34 ;
+    // deprecated / TODO: remove
+    optional uint32 n_row = 40 [default = 1];
+    optional uint32 n_col = 50 [default = 1];
+    // ISO yyyy-mm-dd
+    optional string start_date = 60 [default = 'yyyy-mm-dd'];
+    optional uint32 start_date_julian = 70 ;
+    // old versions had 100% humidity
+    // set to true to regenerate this behavior
+    optional bool disable_humid = 80 [default = false];
+    // old weather files don't have leap years...
+    // set to true to regenerate this behavior
+    optional bool disable_leap_years = 90 [default = false];
+    // 2012 weather files includes leap day 
+    // but tosses dec 31?
+    // no tests written for, ignore...
+    // optional bool disable_366_days = 70 [default = false];
+    optional int32 simulation_mode1 = 210 [default = 1]; // #CIMSIM=0,SKEETER_BUSTER=1
+    optional int32 simulation_mode2 = 220 [default = 1]; // #DETERMINISTIC=0, STOCHASTIC=1
+    optional int32 reproduction_mode = 230 [default = 0]; // #CALCULATION=0, SAMPLING=1
+    optional int32 chrom_number = 270 [default = 3]; // # Number of chromosomes used
+    optional bool is_iquitos = 280 [default = true]; // #??
+    // old/ deprecated:
+        optional int32 development_mode = 290 [default = 0]; // #FOCKSDEVEL=0, DEGREEDAYDEVEL=1
+        // dispersal borders only makes sense for grid, deprecated
+        // Block-based LR dispersal
+        // false is for back-compatible tests (broken LR) 
+        // true depends on file_dispersal_block
+        optional bool dispersal_lr_block = 300 [default = false]; // #STICKY_BORDER=0, BOUNCE=1, TORE=2
+        // deprecated / grid-based
+        optional int32 dispersal_mode = 302 [default = 0]; // #STICKY_BORDER=0, BOUNCE=1, TORE=2
+        
+        // food input, fixed = daily_food_gain:
+        // 3 (CIMSIM?): every third day, 3*fixed 
+        // 1: daily, fixed
+        // else: 2*rng*fixed
+        optional int32 food_input_method = 310 [default = 0]; //
+    optional bool mark_release_recapture = 320 [default = false];
+    // DEPRECATED
+    // traditional == spraying??
+    // 0 = not-grid
+    optional int32 traditional_control_method = 330 [default = 0];
+        // see messages PbAdulticide and PbLarvicide
+        // docs from SkeeterBuster.conf: # 0 - None, 1 - Larvicide, 2 - Adulticide
+        // docs from Aedes.cpp:
+		// parameter TRADITIONAL_CONTROL_METHOD (integer)is read as a binary sequence
+		// each position corresponds to a boolean for a given method
+		// e.g. TRADITIONAL_CONTROL_METHOD=0 is read as 000 -> none of the methods are turned on
+		//		TRADITIONAL_CONTROL_METHOD=7 is read as 111 -> all three methods are turned on
+		//		TRADITIONAL_CONTROL_METHOD=5 is read as 101 -> only the first and third are turned on
+//
+// misc other params, maybe move elsewhere?
+    optional bool nopupation = 340 [default = false];
+    // no idea what this does - only tested against 0?
+    optional bool prespecify_pupal_treatment  = 370 [default =  false];
+    //mark-release-recapture
+    optional double female_daily_recapture_rate = 380 [default = 0.0305];
+    optional double male_daily_recapture_rate = 390 [default = 0.0465];
+// location specific tweaks
+    optional bool gordonvale_remove_173_195 = 400 [default = false];
+    optional bool gordonvale_golf_course = 410 [default = false];
+}
+
+message PbSample {
+    // destructive sampling
+    // in_ denotes input file, do_ is boolean 
+    // no prefix is output file
+    // See Sampled.h
+    // and Traditional.cpp (grid)
+    // larval sampling is special - no spec file, uses pupal spec
+    // spraying is just like sampling, only no recording
+    optional bool do_cont_sampling = 20 [default = false];
+    optional string in_cont_sampling = 30 [default = "cont_sampling.csv"];
+    optional string cont_sampling = 40 [default = "cont_sampling_outcome.txt"];
+    // set proportion_of_X_sampled to 0 to disable respective immature sample
+    // both adult and pupae take spec file (day/house)
+    optional bool do_adult_sampling = 70 [default = false];
+    // employ "catch-and-release": don't remove sampled 
+    optional bool do_adult_sampling_observe = 72 [default = false];
+    optional string in_adult_sampling = 80 [default = "adult_sampling.csv"];
+    optional string adult_sampling = 90 [default = "adult_sampling_outcome.txt"];
+    optional double sample_container_probability = 100 [default = 1];
+    // No effect??
+    optional double proportion_of_eggs_sampled = 110 [default = 1];
+    optional double proportion_of_larvae_sampled = 1120 [default = 1];
+    optional double proportion_of_adult_females_sampled = 130 [default = 1];
+    optional double proportion_of_adult_males_sampled = 140 [default = 1];
+    optional double proportion_of_pupae_sampled = 150 [default = 1];
+    // spraying is like sampling, only no output
+    // adult spraying: date, house
+    // see also PbAdulticide
+    optional bool do_adult_spraying  = 160 [default =  false];
+    optional string adult_spraying = 190 [default = "spraying.csv"];
+    optional double adult_spraying_efficacy = 200 [default = 0.9];
+}
+
+message PbEgg {
+    // defaults take from in/confMinimal.SkeeterBuster.conf
+    optional bool oviposit_eggs_independently = 10 [ default = true];
+    optional double probability_clutch_partitioned = 20 [ default = 0.85];
+    optional uint32 maximum_number_of_egg_partitions = 30 [ default = 4];
+    // since the # of partitions randomly varies, these probs are odd
+    // For N partitions, Pr(partition N ) = 1-cumsum(Pr(part 1:(N-1)))
+    // which probably isn't what you'd expect from looking at this
+    optional double proportion_in_partition_0 = 40 [ default = 0.45];
+    optional double proportion_in_partition_1  = 50 [ default = 0.2];
+    optional double proportion_in_partition_2  = 60 [ default = 0.2];
+    optional double proportion_in_partition_3  = 70 [ default = 0.15];
+    optional double proportion_in_partition_4  = 80 [ default = 0];
+    optional double proportion_in_partition_5  = 90 [ default = 0];
+    optional double proportion_in_partition_6  = 100 [ default = 0];
+    optional double proportion_in_partition_7  = 110 [ default = 0];
+    optional double proportion_in_partition_8  = 120 [ default = 0];
+    optional double proportion_in_partition_9  = 130 [ default = 0];
+    optional double larval_effect_on_oviposition_probability = 150 [ default = 1];
+    // pulled from Building.cpp: if (total_number_of_egg_cohorts) { container_probabilities[j]*=0.1;
+    optional double egg_effect_on_oviposition_probability = 160 [ default = 0.1 ];
+}
+
+message PbContainer {
+    // default from Globals.cpp
+    //optional double probability_of_emptying_manually_filled_containers = 10 [ default =0.5];
+    optional double probability_of_emptying_manually_filled_containers = 10 [ default = 0.11 ];
+    optional double oviposition_reduction_in_covered_containers = 20 [ default = 0.1 ];
+    optional double filling_frequency_type_3_containers = 30 [ default = 7 ];
+    //
+    optional int32 container_multiplier_factor = 40 [ default = 1 ];
+    // only makes sense for >= 3
+    optional int32 increased_container_variance = 50 [ default = 0 ];
+    // default from Globals.cpp
+    // optional int32 increased_variance_every_n_houses = 60 [ default =4];
+    optional int32 increased_variance_every_n_houses = 60 [ default = 1 ];
+    optional double food_input_multiplier = 70 [ default = 1 ];
+}
+
+message PbDispersal {
+    optional double nulliparous_female_adult_dispersal = 10 [default = 0.3];
+    optional double parous_female_adult_dispersal = 20 [default = 0.3];
+    optional double male_adult_dispersal = 30 [default = 0.3];
+    optional double nulliparous_female_adult_dispersal_from_empty_house = 40 [default = 0.8];
+    optional double parous_female_adult_dispersal_from_empty_house = 50 [default = 0.8];
+    optional double male_adult_dispersal_when_no_female = 60 [default = 0.8];
+    //??
+    // deprecated
+    optional int32 dispersal_direction_bias = 70 [default = 1];
+    // broken?
+    optional int32 max_number_of_dispersal_steps = 80 [default = 1];
+    // long range, defaults from Globals.cpp=0
+    optional double nulliparous_female_adult_long_range_dispersal = 90 [default = 0.05];
+    optional double parous_female_adult_long_range_dispersal = 100 [default = 0.05];
+    optional double male_adult_long_range_dispersal = 110 [default = 0.05];
+    // broken / not used
+    optional int32 lr_dispersal_max_distance = 120 [default = 10];
+    // Immature movement, defaults from Globals.cpp=0
+    optional double container_movement_probability = 130 [default = 0.01 ];
+}
+
+message PbMedea {
+    optional int32 medea_units = 10 [default = 0];
+    optional int32 medea_cross_rescue = 20 [default = 0];
+    optional double medea_maternal_lethality = 30 [default = 1.0];
+    optional double medea_maternal_fecundity_loss = 40 [default = 0.];
+    optional double medea_maternal_fecundity_loss_dominance = 50 [default = 0.];
+    optional double medea_fitness_cost_per_construct = 60 [default = 0. ];
+    optional double medea_fitness_cost_dominance = 70 [default = 0.5 ];
+    optional int32 medea_female_specific_fitness_cost = 80 [default = 0];
+}
+
+
+message PbWolbachia {
+    optional int32 number_of_incompatible_wolbachia  = 10 [default =  0];
+    optional double wolbachia_infected_female_fecundity_loss  = 20 [default =  0.2];
+    optional double wolbachia_level_of_incompatibility  = 30 [default =  1.];
+    optional double wolbachia_maternal_transmission  = 40 [default =  1.];
+    optional double wolbachia_survival_reduction_female_onset_age  = 50 [default =  20];
+    optional double wolbachia_survival_reduction_female_factor  = 60 [default =  1.0];
+    optional double wolbachia_survival_reduction_male_onset_age  = 70 [default =  20];
+    optional double wolbachia_survival_reduction_male_factor  = 80 [default =  1.0];
+    optional uint32 wolbachia_egg_survival_reduction_onset_age  = 90 [default =  14];
+    optional double wolbachia_egg_survival_reduction_factor  = 100 [default =  1.0];
+    /* from SkeeterBuster.conf
+        # Settings for Wolbachia
+        NUMBER_OF_INCOMPATIBLE_WOLBACHIA = 0
+        WOLBACHIA_INFECTED_FEMALE_FECUNDITY_LOSS = 0
+        WOLBACHIA_LEVEL_OF_INCOMPATIBILITY = 1
+        WOLBACHIA_MATERNAL_TRANSMISSION = 1
+    */
+}
+
+// Settings for engineered underdominance
+message PbEngUnderdom {
+    optional int32 eu_type = 10 [default = 1];
+    optional double fitness_cost_construct_alpha = 20 [default = 0];
+    optional double  fitness_cost_construct_beta = 30 [default = 0];
+    optional double fitness_cost_construct_gamma = 40 [default = 0];
+    optional double fitness_cost_construct_delta = 50 [default = 0];
+    optional double fitness_cost_dominance = 60 [default = 0.5];
+}
+
+message PbMeioticDrive {
+    optional int32 md_type = 10 [default = 1];
+    optional double fitness_cost_insensitive_transgene = 20 [default = 0];
+    optional double fitness_cost_insensitive_natural = 30 [default = 0];
+    optional double fitness_cost_drive_gene = 40 [default = 0];
+    optional double drive_strength_sn = 50 [default = 0.4];
+    optional double drive_strength_it = 60 [default = 0];
+    optional double drive_strength_in = 70 [default = 0];
+    optional double drive_strength_mn = 80 [default = 0];
+    optional double md_fitness_cost_dominance = 90 [default = 0.5];
+}
+
+// # Settings for KillerRescue & ReduceReplace
+// in Input.cpp
+// if (GENETIC_CONTROL_METHOD==FKR)
+//?? and 
+// if (GENETIC_CONTROL_METHOD==ReduceReplace)
+message PbFemKillRescue {
+    //?? should some of these be bools?
+    optional int32 is_rescue = 10 [default = 0];
+    optional int32 number_of_additional_loci  = 20 [default =  1];
+    optional int32 number_of_female_killing_loci = 30 [default = 1];
+    optional double female_killing_efficiency = 40 [default = 1.0];
+    // fkr_is_emb 0 in .conf, true in Globals
+    optional int32 fkr_is_embryo_killing = 50 [default = 0];
+    optional double killing_allele_homozygous_fitness_cost = 60 [default = 0.0];
+    optional double killing_allele_fitness_cost_dominance = 70 [default = 0.5];
+    optional double rescue_allele_homozygous_fitness_cost = 80 [default = 0.0];
+    optional double rescue_allele_fitness_cost_dominance = 90 [default = 0.5];
+    optional double transgene_allele_homozygous_fitness_cost = 100 [default = 0.0];
+    optional double transgene_allele_fitness_cost_dominance = 110 [default = 0.5];
+}
+
+// Nominal daily survivals
+message PbNominalDailySurvival {
+    optional double eggs = 10 [default = 0.99];
+    optional double female_larvae = 20 [default = 0.99];
+    optional double male_larvae = 30 [default = 0.99];
+    optional double female_pupae = 40 [default = 0.99];
+    optional double male_pupae = 50 [default = 0.99];
+    optional double cimsim_female_adults = 60 [default = 0.91];
+    optional double cimsim_male_adults = 70 [default = 0.91];
+    optional double skeeter_buster_female_adults = 80 [default = 0.89];
+    optional double skeeter_buster_male_adults = 90 [default = 0.77];
+}
+
+message PbDailySurvival {
+    optional double egg_low_temperature = 10 [default = 0.05];
+    optional double egg_low_temperature_limit = 20 [default = -14];
+    optional double egg_normal_temperature_lower_limit = 30 [default = -6];
+    optional double egg_normal_temperature_upper_limit = 40 [default = 30];
+    optional double egg_high_temperature = 50 [default = 0.05];
+    optional double egg_high_temperature_limit = 60 [default = 47];
+//
+    optional double female_larvae_low_temperature = 70 [default = 0.05];
+    optional double female_larvae_low_temperature_limit = 80 [default = 5];
+    optional double female_larvae_normal_temperature_lower_limit = 90 [default = 10];
+    optional double female_larvae_normal_temperature_upper_limit = 100 [default = 39];
+    optional double female_larvae_high_temperature = 110 [default = 0.05];
+    optional double female_larvae_high_temperature_limit = 120 [default = 44];
+//
+    optional double male_larvae_low_temperature = 130 [default = 0.05];
+    optional double male_larvae_low_temperature_limit = 140 [default = 5];
+    optional double male_larvae_normal_temperature_lower_limit = 150 [default = 10];
+    optional double male_larvae_normal_temperature_upper_limit = 160 [default = 39];
+    optional double male_larvae_high_temperature = 170 [default = 0.05];
+    optional double male_larvae_high_temperature_limit = 180 [default = 44];
+//
+    optional double female_pupae_low_temperature = 190 [default = 0.05];
+    optional double female_pupae_low_temperature_limit = 200 [default = 5];
+    optional double female_pupae_normal_temperature_lower_limit = 210 [default = 10];
+    optional double female_pupae_normal_temperature_upper_limit = 220 [default = 39];
+    optional double female_pupae_high_temperature = 230 [default = 0.05];
+    optional double female_pupae_high_temperature_limit = 240 [default = 44];
+//
+    optional double male_pupae_low_temperature = 250 [default = 0.05];
+    optional double male_pupae_low_temperature_limit = 260 [default = 5];
+    optional double male_pupae_normal_temperature_lower_limit = 270 [default = 10];
+    optional double male_pupae_normal_temperature_upper_limit = 280 [default = 39];
+    optional double male_pupae_high_temperature = 290 [default = 0.05];
+    optional double male_pupae_high_temperature_limit = 300 [default = 44];
+//
+    optional double female_adult_low_temperature = 310 [default = 0.05];
+    optional double female_adult_low_temperature_limit = 320 [default = 0];
+    optional double female_adult_normal_temperature_lower_limit = 330 [default = 4];
+    optional double female_adult_normal_temperature_upper_limit = 340 [default = 40];
+    optional double female_adult_high_temperature = 350 [default = 0.05];
+    optional double female_adult_high_temperature_limit = 360 [default = 50];
+//
+    optional double male_adult_low_temperature = 370 [default = 0.05];
+    optional double male_adult_low_temperature_limit = 380 [default = 0];
+    optional double male_adult_normal_temperature_lower_limit = 390 [default = 4];
+    optional double male_adult_normal_temperature_upper_limit = 400 [default = 40];
+    optional double male_adult_high_temperature = 410 [default = 0.05];
+    optional double male_adult_high_temperature_limit = 420 [default = 50];
+//
+    optional double egg_wet_container = 430 [default = 1];
+    optional double egg_dry_container_sunexposure_limit = 440 [default = 0.85];
+    optional double egg_dry_container_low_sunexposure_low_saturationdeficit_limit = 450 [default = 10];
+    optional double egg_dry_container_low_sunexposure_high_saturationdeficit_limit = 460 [default = 40];
+    optional double egg_dry_container_low_sunexposure_low_saturationdeficit = 470 [default = 0.99];
+    optional double egg_dry_container_low_sunexposure_high_saturationdeficit = 480 [default = 0.95];
+    optional double egg_dry_container_high_sunexposure = 490 [default = 0.95];
+//
+    optional double female_larvae_dry_container = 500 [default = 0.05];
+    optional double male_larvae_dry_container = 510 [default = 0.05];
+//
+    optional double female_adult_low_saturationdeficit_limit = 520 [default = 10];
+    optional double female_adult_high_saturationdeficit_limit = 530 [default = 30];
+    optional double female_adult_low_saturationdeficit = 540 [default = 1];
+    // different default in Globals.cpp:
+    // optional double female_adult_high_saturationdeficit = 550 [default = 0.95];
+    optional double female_adult_high_saturationdeficit = 550 [default = 0.6];
+//
+    optional double male_adult_low_saturationdeficit_limit = 560 [default = 10];
+    optional double male_adult_high_saturationdeficit_limit = 570 [default = 30];
+    optional double male_adult_low_saturationdeficit = 580 [default = 1];
+    // different default in Globals.cpp:
+    // optional double male_adult_high_saturationdeficit = 590 [default = 0.95];
+    optional double male_adult_high_saturationdeficit = 590 [default = 0.6];
+//
+    optional double egg_topredation_low_temperature_limit = 600 [default = 20];
+    optional double egg_topredation_high_temperature_limit = 610 [default = 30];
+    optional double egg_topredation_low_temperature = 620 [default = 1];
+    optional double egg_topredation_high_temperature = 630 [default = 0.8];
+}
+
+message PbGeneticControl {
+    // # 0 - NEUTRAL, 1 - ENGINEERED UNDERDOMINANCE, 2 - WOLBACHIA, 3 - MEIOTIC DRIVE, 4 - MEDEA, 6 - LETHAL GENES, 8 - Reduce and replace 
+    // default 0 in Globals.cpp
+    optional int32 genetic_control_method = 10 [default = 8];
+    // next 2 0 - eggs, 1 - larvae, 2 - pupae, 3 - adults
+    // default 0 in Globals.cpp
+    optional int32 fitness_cost_stage = 20 [default = 3];
+    //??
+    optional uint32 fitness_cost_stage_rr  = 30 [default =  0];
+    // # Is tetracycline used in the released containers?
+    // default 0 in Globals.cpp
+    optional int32 tetracycline  = 40 [default =  1];
+    // age to kill
+    // default 0 in Globals.cpp
+    optional uint32 fitness_cost_stage_specific_age = 50 [default = 1];
+    // # 0 - soft ; 1 - hard
+    optional int32 embryonic_cost_selection_type = 60 [default = 1];
+}
+
+// # Enzyme kinetics parameters
+message PbEnzyme {
+    optional double r = 10 [default = 1.987];
+// embryo
+    optional double ro25_embryonation = 20 [default = 0.01066];
+    optional double dha_embryonation = 30 [default = 10798.18];
+    optional double dhh_embryonation = 40 [default = 100000];
+    optional double thalf_embryonation = 50 [default = 14184.5];
+// larva
+    optional double ro25_larval_development = 60 [default = 0.00873];
+    optional double dha_larval_development = 70 [default = 26018.51];
+    optional double dhh_larval_development = 80 [default = 55990.75];
+    optional double thalf_larval_development = 90 [default = 304.58];
+// pupa
+    optional double ro25_pupal_development = 100 [default = 0.0161];
+    optional double dha_pupal_development = 110 [default = 14931.94];
+    optional double dhh_pupal_development = 120 [default = -472379];
+    optional double thalf_pupal_development = 130 [default = 148.45];
+// adults (both male and female)
+    optional double ro25_gonotrophic_cycle = 140 [default = 0.00898];
+    optional double dha_gonotrophic_cycle = 150 [default = 15725.23];
+    optional double dhh_gonotrophic_cycle = 160 [default = 1756481];
+    optional double thalf_gonotrophic_cycle = 170 [default = 447.17];
+//
+    optional double physiological_development_threshold_embryonation = 180 [default = 0.95];
+    optional double skeeter_buster_physiological_development_threshold_pupation = 190 [default = 0.95];
+    optional double cimsim_physiological_development_threshold_pupation = 200 [default = 0.95];
+    optional double physiological_development_threshold_emergence = 210 [default = 0.95];
+    optional double physiological_development_threshold_first_gonotrophic_cycle = 220 [default = 1];
+    optional double physiological_development_threshold_later_gonotrophic_cycles = 230 [default = 0.58];
+//
+    optional double skeeter_buster_physiological_development_threshold_first = 330 [default = 0.89];
+    optional double skeeter_buster_physiological_development_threshold_last = 340 [default = 1.17];
+    optional double skeeter_buster_physiological_development_threshold_shape = 350 [default = 2.0126];
+}
+
+// Female larval parameters (including Gilpin-McClelland parameters)
+// most are identical to male
+message PbFemaleLarvae {
+    optional double skeeter_buster_female_larvae_weight_at_hatch = 10 [default = 0.001];
+    optional double cimsim_female_larvae_weight_at_hatch = 20 [default = 0.0034];
+    optional double female_larvae_daily_survival_fasting_with_lipid_reserve = 30 [default = 0.95];
+    optional double female_larvae_daily_survival_fasting_without_lipid_reserve = 40 [default = 0.5];
+    optional double female_larvae_smallest_weight_for_survival = 50 [default = 0.0009];
+    optional double skeeter_buster_female_larvae_maximal_physiological_developmental_time_for_survival = 60 [default = 8];
+    optional double cimsim_female_larvae_maximal_physiological_developmental_time_for_survival = 70 [default = 8];
+    optional double female_larvae_conversion_rate_of_consumed_food_to_biomass = 80 [default = 0.3];
+    optional double female_larvae_increment_of_increase_of_rate_of_food_exploitation = 90 [default = 0.8];
+    //?? was 20 in Global.cpp?
+    optional double female_larvae_asymptotic_rate_of_food_exploitation_at_high_food_densities = 100 [default = 0.1];
+    optional double female_larvae_rate_of_metabolic_weight_loss_as_a_function_of_dry_weight_of_larvae = 110 [default = 0.016];
+    optional double female_larvae_exponent_of_metabolic_requirements_of_larvae_as_a_function_of_dry_weight_of_larvae = 120 [default = 0.667];
+    optional double female_larvae_chronological_basis_at_26c = 130 [default = 0.001];
+    optional double female_larvae_minimum_lipid_ratio_of_living_larvae = 140 [default = 0.15];
+    optional double female_larvae_conversion_of_dry_body_weight_to_lipid_reserve_parameter_one = 150 [default = 0.059];
+    optional double female_larvae_conversion_of_dry_body_weight_to_lipid_reserve_parameter_two = 160 [default = 6.9];
+    // In sim, this is a generic "Larvae_Conversion_rate_of_cadavers_to_food;"
+    optional double female_larvae_conversion_rate_of_cadavers_to_food = 170 [default = 0.4];
+    optional double female_larvae_survival_at_pupation_due_to_birth_defects = 180 [default = 0.95];
+// Female larvae pupation parameters in Skeeter Buster
+    optional double skeeter_buster_female_larvae_absolute_minimum_weight_for_pupation = 190 [default = 0.1];
+    optional double skeeter_buster_female_larvae_slope_of_minimal_larval_weight_for_pupation_as_function_of_t = 200 [default = -0.0389];
+    // differs from male from here down
+    optional double skeeter_buster_female_larvae_intercept_of_minimal_larval_weight_for_pupation_as_function_of_t = 210 [default = 1.79935];
+    optional double skeeter_buster_female_larvae_intercept_of_minimal_larval_weight_for_pupation_as_function_of_t_25 = 220 [default = 1.541121272542];
+    optional double skeeter_buster_female_larvae_intercept_of_minimal_larval_weight_for_pupation_as_function_of_t_50 = 230 [default = 1.79935];
+    optional double skeeter_buster_female_larvae_intercept_of_minimal_larval_weight_for_pupation_as_function_of_t_75 = 240 [default = 2.32698039000174];
+    //?? different rounding, 2.854526078000348 in Globals.cpp
+    optional double skeeter_buster_female_larvae_intercept_of_minimal_larval_weight_for_pupation_as_function_of_t_100 = 250 [default = 2.85452607800035];
+    optional double skeeter_buster_female_larvae_physiological_developmental_percent_for_wmin = 260 [default = 0.95];
+//cimsim
+    optional double cimsim_female_larvae_absolute_minimum_weight_for_pupation = 270 [default = 0.1];
+    optional double cimsim_female_larvae_slope_of_minimal_larval_weight_for_pupation_as_function_of_t = 280 [default = -0.0389];
+    optional double cimsim_female_larvae_intercept_of_minimal_larval_weight_for_pupation_as_function_of_t = 290 [default = 2.11];
+    optional double cimsim_female_larvae_physiological_developmental_percent_for_wmin = 300 [default = 0.95];
+}
+
+// Male larval parameters (including Gilpin-McClelland parameters)
+// most are identical to female
+message PbMaleLarvae {
+    optional double skeeter_buster_male_larvae_weight_at_hatch = 10 [default = 0.001];
+    optional double cimsim_male_larvae_weight_at_hatch = 20 [default = 0.0034];
+    optional double male_larvae_daily_survival_fasting_with_lipid_reserve = 30 [default = 0.95];
+    optional double male_larvae_daily_survival_fasting_without_lipid_reserve = 40 [default = 0.5];
+    // !! param unused
+    optional double male_larvae_smallest_weight_for_survival = 50 [default = 0.0009];
+    optional double skeeter_buster_male_larvae_maximal_physiological_developmental_time_for_survival = 60 [default = 8];
+    optional double cimsim_male_larvae_maximal_physiological_developmental_time_for_survival = 70 [default = 8];
+    optional double male_larvae_conversion_rate_of_consumed_food_to_biomass = 80 [default = 0.3];
+    optional double male_larvae_increment_of_increase_of_rate_of_food_exploitation = 90 [default = 0.8];
+    //?? 20 in Global.cpp
+    optional double male_larvae_asymptotic_rate_of_food_exploitation_at_high_food_densities = 100 [default = 0.1];
+    optional double male_larvae_rate_of_metabolic_weight_loss_as_a_function_of_dry_weight_of_larvae = 110 [default = 0.016];
+    optional double male_larvae_exponent_of_metabolic_requirements_of_larvae_as_a_function_of_dry_weight_of_larvae = 120 [default = 0.667];
+    optional double male_larvae_chronological_basis_at_26c = 130 [default = 0.001];
+    optional double male_larvae_minimum_lipid_ratio_of_living_larvae = 140 [default = 0.15];
+    optional double male_larvae_conversion_of_dry_body_weight_to_lipid_reserve_parameter_one = 150 [default = 0.059];
+    optional double male_larvae_conversion_of_dry_body_weight_to_lipid_reserve_parameter_two = 160 [default = 6.9];
+    //?? In .conf but not Globals.cpp? #MALE_LARVAE_CONVERSION_RATE_OF_CADAVERS_TO_FOOD = 0.4
+    // sim uses female...
+    optional double male_larvae_survival_at_pupation_due_to_birth_defects = 170 [default = 0.95];
+// Male larvae pupation parameters in Skeeter Buster
+//?? SKEETER BUSTER
+    optional double skeeter_buster_male_larvae_absolute_minimum_weight_for_pupation = 180 [default = 0.1];
+// differs from female from here down
+    optional double skeeter_buster_male_larvae_slope_of_minimal_larval_weight_for_pupation_as_function_of_t = 190 [default = -0.0389];
+    optional double skeeter_buster_male_larvae_intercept_of_minimal_larval_weight_for_pupation_as_function_of_t = 200 [default = 1.44935];
+    // rounding difference, was 1.227508848485034003875 in Globals.cpp
+    optional double skeeter_buster_male_larvae_intercept_of_minimal_larval_weight_for_pupation_as_function_of_t_25 = 210 [default = 1.22750884848503];
+    optional double skeeter_buster_male_larvae_intercept_of_minimal_larval_weight_for_pupation_as_function_of_t_50 = 220 [default = 1.44935];
+    // rounding difference, was 1.9664689009965085625 in Globals.cpp
+    optional double skeeter_buster_male_larvae_intercept_of_minimal_larval_weight_for_pupation_as_function_of_t_75 = 230 [default = 1.96646890099651];
+    // rounding difference, was 2.483587801993017125 in Globals.cpp
+    optional double skeeter_buster_male_larvae_intercept_of_minimal_larval_weight_for_pupation_as_function_of_t_100 = 240 [default = 2.48358780199302];
+    optional double skeeter_buster_male_larvae_physiological_developmental_percent_for_wmin = 250 [default = 0.95];
+//CIMSIM
+    optional double cimsim_male_larvae_absolute_minimum_weight_for_pupation = 260 [default = 0.1];
+    optional double cimsim_male_larvae_slope_of_minimal_larval_weight_for_pupation_as_function_of_t = 270 [default = -0.0389];
+    optional double cimsim_male_larvae_intercept_of_minimal_larval_weight_for_pupation_as_function_of_t = 280 [default = 2.11];
+    optional double cimsim_male_larvae_physiological_developmental_percent_for_wmin = 290 [default = 0.95];
+}
+
+
+// DEPRECATED
+message PbAdulticide{
+    // old grid-based model, i.e. see Traditional.cpp
+    // date, frequency, type, length, & region refers to 
+    // new, per-house specification is in PbSample
+    // and does not use this at all
+    optional double adulticide_compliance = 4 [default = 0.9];
+    optional double adulticide_efficacy = 6 [default = 0.9];
+    optional uint32 adulticide_begin_date = 10 [default = 365];
+    optional uint32 adulticide_end_date = 20 [default = 365];
+    optional int32 adulticide_frequency = 30 [default = 1];
+    optional int32 adulticide_type = 40 [default = 0];
+    optional int32 adulticide_region = 60 [default = 0];
+    optional int32 adulticide_size = 70 [default = 10];
+    optional uint32 adulticide_region_2_xmin = 80 [default = 0];
+    optional uint32 adulticide_region_2_xmax = 90 [default = 0];
+    optional uint32 adulticide_region_2_ymin = 100 [default = 0];
+    optional uint32 adulticide_region_2_ymax = 110 [default = 0];
+    // residual control is crazy-sauce
+    optional bool do_residual_control = 120 [default = false];
+    optional int32 adulticide_residual_length = 130 [default = 0];
+    optional double adulticide_efficacy_decrease = 140 [default = 0.5];
+}
+
+// DEPRECATED
+message PbLarvicide{
+// the next 10 params are grid-based, see Traditional.cpp
+// e.g. Amy's Data: ExperimentInputFolder/Larvicide_Specification.txt
+    optional uint32 larvicide_begin_date = 10 [default = 365];
+    optional uint32 larvicide_end_date = 20 [default = 365];
+    optional int32 larvicide_frequency = 30 [default = 1];
+    optional int32 larvicide_type = 40 [default = 0];
+    optional int32 larvicide_region = 50 [default = 0];
+    optional int32 larvicide_size = 60 [default = 10];
+    optional uint32 larvicide_region_2_xmin = 70 [default = 0];
+    optional uint32 larvicide_region_2_xmax = 80 [default = 0];
+    optional uint32 larvicide_region_2_ymin = 90 [default = 0];
+    optional uint32 larvicide_region_2_ymax = 100 [default = 0];
+// keep these, new form
+    optional bool prespecify_larval_treatment  = 106 [default =  false];
+//?? extern double INITIAL_LARVICIDE_EFFICACY;
+//? found only in Aedes.h
+    optional double larvicide_container_probability = 110 [default = 0.8];
+    optional double larvicide_efficacy_on_eggs = 120 [default = 0.95];
+    optional double larvicide_efficacy_on_larvae = 130 [default = 0.95];
+    optional double larvicide_efficacy_on_pupae = 140 [default = 0.95];
+    optional double larvicide_compliance = 150 [default = 0.9];
+    optional double daily_larvicide_decay_rate  = 160 [default =  0.8];
+    // Default from Globals.cpp: 
+    // optional double daily_larvicide_decay_rate  = 160 [default =  0.5;] 
+}
+
+// DEPRECATED
+message PbSourceRemoval{
+// in Traditional.cpp see Source_Removal
+// not used?
+// no defaults in SkeeterBuster.conf
+// old grid-based code
+    optional uint32 source_removal_begin_date = 10 [default = 365];
+    optional int32 source_removal_type = 20 [default = 0];
+    optional int32 source_removal_region = 30 [default = 0];
+    optional int32 source_removal_size = 40 [default = 10];
+    optional uint32 source_removal_region_2_xmin = 50 [default = 0];
+    optional uint32 source_removal_region_2_xmax = 60 [default = 0];
+    optional uint32 source_removal_region_2_ymin = 70 [default = 0];
+    optional uint32 source_removal_region_2_ymax = 80 [default = 0];
+    optional double source_removal_proportion = 90 [default = 1.0];
+    optional double source_removal_compliance = 100 [default = 0.9];
+}
+
+// DEPRECATED
+message PbStableAgeDist{
+// Stable Age Distribution
+// Kenichi's notes, not clear
+// In .setup, age distribution is specified for transgenic release
+// Deprecated??
+// No settings in SkeeterBuster.conf
+    optional bool sad_introduction = 10 [default = false];
+    optional uint32 sad_introduction_date = 20 [default = 365];
+    optional int32 sad_introduction_region = 30 [default = 0];
+    optional uint32 sad_introduction_x_min = 40 [default = 0];
+    optional uint32 sad_introduction_x_max = 50 [default = 0];
+    optional uint32 sad_introduction_y_min = 60 [default = 0];
+    optional uint32 sad_introduction_y_max = 70 [default = 0];
+    optional double sad_introduction_frequency = 80 [default = 0.0];
+    optional int32 sad_introduction_female_genotype = 90 [default = 0];
+}
+
+message PbAgeDepSurv {
+// Age-dependent survival
+// Commented lines show Globals.cpp old defaults
+    // # 0=none, 1=linear, 2=linear from age
+    optional int32 female_age_dependent_survival = 10 [default = 0 ];
+    // optional int female_maximum_age_1  = 20 [default =  20 ];
+    optional uint32 female_maximum_age_1  = 20 [default =  30 ];
+    // optional int female_start_senescence_2  = 30 [default =  10 ];
+    optional uint32 female_start_senescence_2  = 30 [default =  20 ];
+    //optional int female_maximum_age_2  = 40 [default =  20 ];
+    optional int32 female_maximum_age_2  = 40 [default =  30 ];
+//
+    // # 0=none, 1=linear, 2=linear from age
+    optional int32 male_age_dependent_survival = 50 [default = 0 ];
+    // optional int male_maximum_age_1  = 60 [default =  20 ];
+    optional uint32 male_maximum_age_1  = 60 [default =  30 ];
+    //optional int male_start_senescence_2  = 70 [default =  10 ];
+    optional uint32 male_start_senescence_2  = 70 [default =  20 ];
+    // optional int male_maximum_age_2  = 80 [default =  20 ];
+    optional uint32 male_maximum_age_2  = 80 [default =  30 ];
+}
+
+message PbControl {
+    optional double reduction_in_transgenic_males_mating_competitiveness = 10 [default = 1.];
+    optional double reduction_in_transgenic_males_mating_competitiveness_dominance = 20 [default = 0.5];
+    optional double male_killing_efficiency = 30 [default = 1.0];
+    optional int32 number_of_male_killing_loci = 40 [default = 1];
+    optional double selective_fitness_cost = 50 [default = 0.];
+    optional double selective_fitness_cost_dominance = 60 [default = 0.5];
+    optional double ovitrap_female_killing_efficiency = 70 [default = 1.0];
+}
+
+message PbDevel {
+// eggs
+    optional double minimum_temperature_for_egghatch = 10 [default = 18];
+    optional double ratio_of_eggs_hatching_without_flooding = 20 [default = 0.197];
+    optional double daily_ratio_of_embryonated_eggs_that_hatch_if_submerged = 30 [default = 0.596];
+    optional double eggs_sex_percentage_female = 40 [default = 0.5];
+    //# Number of Euler integration steps in Gilpin and McClelland equations
+    optional int32 larvae_number_of_euler_steps = 50 [default = 8];
+//# Female param
+    optional double female_pupae_survival_at_emergence = 60 [default = 0.83];
+    optional double female_adult_conversion_factor_of_dry_weight_of_larvae_to_wet_weight_of_adult = 70 [default = 1.655];
+    optional double female_adult_daily_fecundity_factor_for_wet_weight = 80 [default = 45.9];
+    // rounding difference, value from Global.cpp:
+    //optional double skeeter_buster_fecundity_drop_by_age = 90 [default = -0.4366743082605775688381464];
+    optional double skeeter_buster_fecundity_drop_by_age = 90 [default = -0.436674308260578];
+    // rounding difference, value from Global.cpp:
+    //optional double skeeter_buster_fecundity_ratio_standard_deviation_mean = 100 [default = 0.37519462718322044613246790767955];
+    optional double skeeter_buster_fecundity_ratio_standard_deviation_mean = 100 [default = 0.37519462718322];
+    optional double female_adult_minimum_temperature_for_oviposition = 110 [default = 18];
+    optional double daily_remating_probability_parous_females = 120 [default = 0.0];
+// male 
+    optional double male_pupae_survival_at_emergence = 130 [default = 0.83];
+//
+//degree-day parameters
+    // rounding difference, value from Global.cpp:
+    //optional double minimum_developmental_temperature = 140 [default = 13.4];
+    optional double minimum_developmental_temperature = 140 [default = 0];
+    // rounding difference, value from Global.cpp:
+    //optional double degree_hours_to_be_reached = 150 [default = 1509.090914578];
+    optional double degree_hours_to_be_reached = 150 [default = 0];
+}

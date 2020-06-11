@@ -1,0 +1,11 @@
+self,link,weight
+## comments ok
+## weight can be integer, will be normalized
+3,6,20
+3,8,5
+3,9,75
+8,3,1
+6,3,1
+6,9,1
+9,3,1
+9,6,9
