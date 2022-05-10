@@ -31,4 +31,5 @@ The following software is required ( ```commands``` shown for Debian/ubuntu ).
 -- A config.csv file is typically provided to over-ride default values (see examples in ./test)
 * The most realistic example is provided in ./test/rangefind (drawn from Iquitos)
 -- In R, run ```source('./R/example_run.R', chdir=T)```
-
+* By default, weather is provided for Iquitos, Peru (see `./test/base/IquitosWeatherAll.csv.gz`)
+-- Users can provide an alterate weather file in GSOD format (for details, see  https://cran.r-project.org/web/packages/GSODR/vignettes/GSODR.html)
