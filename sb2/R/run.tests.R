@@ -34,3 +34,5 @@ if( results$success) {
     .which <- results$fail.which
     cat(sprintf('Failure in Test %d: %s\n\n', .which, names(results)[.which]));
 }
+
+cat("To cleanup weather dirs, do:\n## rm test/setup.*/days.*/weather.csv")

@@ -151,7 +151,7 @@ install :
 	##############################
 	## On debian/ubuntu, run the following (i.e. copy/paste):
 	## sudo apt-get install build-essential	
-	## sudo apt-get install libsqlite3-dev libprotobuf-dev protobuf-compiler r-base r-base-dev
+	## sudo apt-get install time libgsl-dev libsqlite3-dev libprotobuf-dev protobuf-compiler r-base r-base-dev
 	##############################
 	@read -r -p "## Hit enter to continue with R package installation." CONTINUE
 	$(MAKE) -C $(PREP_DIR) PACKAGES_INSTALLED

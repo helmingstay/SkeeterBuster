@@ -1,6 +1,7 @@
 version:
 	R -q --vanilla -f setVersion.R 2> /dev/null
 test: 
+	## requires the "time" program
 	time R --slave --vanilla -f run.tests.R #2> /dev/null
 
 
